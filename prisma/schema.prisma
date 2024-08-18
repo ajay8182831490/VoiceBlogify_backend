@@ -1,0 +1,103 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             Int        @id @default(autoincrement())
+  email          String     @unique
+  password       String?    // Nullable, for email/password authentication
+  googleId       String?    // Nullable, for Google OAuth authentication
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  tokens         Token[]    // One-to-many relationship with Token model
+  subscriptions  Subscription[] // One-to-many relationship with Subscription model
+  freeTrialStart DateTime?  // Nullable, for trial start date
+  role           UserRole   @default(USER)
+
+  payments         Payment[]
+}
+model Token {
+  id            Int        @id @default(autoincrement())
+  userId        Int      
+  user          User       @relation(fields: [userId], references: [id])
+  platform      Platform   // Enum to specify the social media platform
+  platformUserId String    // Unique ID for the user's account on the platform
+  accountName   String?    // Optional: Name or username of the account
+  accessToken   String     // Access token for API requests
+  refreshToken  String?    // Refresh token, if applicable
+  expiresAt     DateTime   // Token expiration time
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+model Payment {
+  id              Int            @id @default(autoincrement())
+  userId          Int            // Foreign key reference
+  user            User           @relation(fields: [userId], references: [id])
+  subscriptionId  Int            // Foreign key reference
+  subscription    Subscription  @relation(fields: [subscriptionId], references: [id])
+  amount          Float
+  paymentDate     DateTime       @default(now())
+  paymentMethod   PaymentMethod
+}
+model Feature {
+  id          Int       @id @default(autoincrement())
+  name        String
+  description String?
+  plan        Plan      // Enum to define which plan has this feature
+}
+model Subscription {
+  id                    Int        @id @default(autoincrement())
+  userId                Int        // Foreign key reference
+  user                  User       @relation(fields: [userId], references: [id])
+  stripeSubscriptionId  String     // Stripe subscription ID
+  plan                  Plan       // Enum to define the subscription plan type
+  status                String     @default("ACTIVE") // Could be ACTIVE, CANCELED, etc.
+  startDate             DateTime   @default(now())
+  endDate               DateTime?  // Nullable, used when the subscription ends
+  isActive              Boolean    @default(true)
+  billingCycle          BillingCycle
+  trialEndDate          DateTime?  // Nullable, used to track the end of the free trial
+  payments              Payment[]
+}
+
+
+
+enum Platform {
+  LINKEDIN
+  MEDIUM
+  REDDIT
+  // Add other platforms as needed
+}
+
+enum Plan {
+  FREE_TRIAL
+  BASIC
+  PREMIUM
+}
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  PAYPAL
+  STRIPE
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
