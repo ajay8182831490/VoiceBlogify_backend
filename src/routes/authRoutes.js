@@ -1,6 +1,6 @@
 import express from 'express';
-import passport from '../config/passport';
-import { registerUser, logoutUser } from '../controller/authController';
+import passport from '../config/passport.js';
+import { registerUser, logoutUser } from '../controller/authController.js';
 
 const router = express.Router();
 

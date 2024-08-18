@@ -20,9 +20,9 @@ model User {
   googleId       String?    // Nullable, for Google OAuth authentication
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
-  tokens         Token[]    // One-to-many relationship with Token model
-  subscriptions  Subscription[] // One-to-many relationship with Subscription model
-  freeTrialStart DateTime?  // Nullable, for trial start date
+  tokens         Token[]    
+  subscriptions  Subscription[] 
+  freeTrialStart DateTime?  
   role           UserRole   @default(USER)
 
   payments         Payment[]
@@ -31,7 +31,7 @@ model Token {
   id            Int        @id @default(autoincrement())
   userId        Int      
   user          User       @relation(fields: [userId], references: [id])
-  platform      Platform   // Enum to specify the social media platform
+  platform      Platform   
   platformUserId String    // Unique ID for the user's account on the platform
   accountName   String?    // Optional: Name or username of the account
   accessToken   String     // Access token for API requests

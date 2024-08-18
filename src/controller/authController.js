@@ -1,10 +1,10 @@
-import { Request, Response } from 'express';
+
 import { PrismaClient } from '@prisma/client';
-import { hashPassword } from '../utils/hashPassword';
+import { hashPassword } from '../utils/hashPassword.js';
 
 const prisma = new PrismaClient();
 
-export const registerUser = async (req: Request, res: Response) => {
+export const registerUser = async (req, res) => {
   const { email, password, name } = req.body;
   try {
     const existingUser = await prisma.user.findUnique({
@@ -32,7 +32,7 @@ export const registerUser = async (req: Request, res: Response) => {
     res.status(500).send('Error registering user');
   }
 };
-export const logoutUser = (req: Request, res: Response) => {
+export const logoutUser = (req, res) => {
   req.logout(err => {
     if (err) return res.status(500).send('Error logging out');
     res.send('User logged out successfully');

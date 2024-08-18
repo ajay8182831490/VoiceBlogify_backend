@@ -2,12 +2,12 @@ import passport from 'passport';
 import { Strategy as LocalStrategy } from 'passport-local';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { PrismaClient } from '@prisma/client';
-const bcrypt = require('bcrypt');
+import bcrypt from 'bcrypt'
 
 const prisma = new PrismaClient();
 
 passport.use(new LocalStrategy(
-  async (username: string, password: string, done: any) => {
+  async (username, password, done) => {
     try {
       const user = await prisma.user.findUnique({ where: { email: username } });
       if (!user) {
@@ -25,10 +25,10 @@ passport.use(new LocalStrategy(
 ));
 
 passport.use(new GoogleStrategy({
-  clientID: process.env.clientid!,
-  clientSecret: process.env.clientsecret!,
-  callbackURL: 'https://medium-f2ly.onrender.com/auth/google/callback'
-}, async (token: string, tokenSecret: string, profile: any, done: any) => {
+  clientID: process.env.clientid,
+  clientSecret: process.env.clientsecret,
+  callbackURL: 'http://localhost:3000/auth/google/callback'
+}, async (token, tokenSecret, profile, done) => {
   try {
 
 
@@ -41,7 +41,8 @@ passport.use(new GoogleStrategy({
       user = await prisma.user.create({
         data: {
           googleId: profile.id,
-          name: profile.displayName,
+          name: profile.displayName, ofile
+          // here we have need to add email id from pr
 
 
         }
@@ -53,11 +54,11 @@ passport.use(new GoogleStrategy({
   }
 }));
 
-passport.serializeUser((user: any, done) => {
+passport.serializeUser((user) => {
   done(null, user.id);
 });
 
-passport.deserializeUser(async (id: number, done: any) => {
+passport.deserializeUser(async (id, done) => {
   try {
     const user = await prisma.user.findUnique({ where: { id } });
     done(null, user);
@@ -66,4 +67,4 @@ passport.deserializeUser(async (id: number, done: any) => {
   }
 });
 
-export default passport;
+export default passport
