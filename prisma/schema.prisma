@@ -17,9 +17,10 @@ model User {
   id             Int        @id @default(autoincrement())
   email          String     @unique
   password       String?    // Nullable, for email/password authentication
-  googleId       String?    // Nullable, for Google OAuth authentication
+  googleId       String?   @unique  // Nullable, for Google OAuth authentication
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
+  name      String?
   tokens         Token[]    
   subscriptions  Subscription[] 
   freeTrialStart DateTime?  

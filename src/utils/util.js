@@ -41,21 +41,20 @@ const transporter = nodemailer.createTransport({
 
 
     auth: {
-        user: 'ajay8182831490@gmail.com',
-        pass: 'twgy htmx zxkp lgec',
+        user: process.env.email,
+        pass: process.env.pass,
         method: 'login'
     },
     tls: {
         rejectUnauthorized: false
     }
 });
-const sendEmail = (email, token) => {
+const sendEmail = (email, content) => {
     const mailOptions = {
-        from: 'ajay8182831490@gmail.com',
+        from: process.env.email,
         to: email,
         subject: 'reset password',
-        html: `<p>Click on the link for reset password <a href="http://localhost:3000/resetPassword?token=${token}">Reset Password</a>
->here</a></p>`
+        html: content
     };
 
 
@@ -70,7 +69,7 @@ const sendEmail = (email, token) => {
 };
 const sendEmailforOtp = (email, otp) => {
     const mailOptions = {
-        from: 'ajay8182831490@gmail.com',
+        from: process.env.email,
         to: email,
         subject: 'verify account',
         html: `<p>your one time password (otp) is ${otp}

@@ -1,7 +1,7 @@
-require('winston-daily-rotate-file');
-
-const winston = require('winston');
-const expressWinston = require('express-winston');
+import winston from 'winston';
+import 'winston-daily-rotate-file';
+import expressWinston from 'express-winston';
+import { format } from 'winston';
 
 const ROUTES_TO_BE_IGNORED = ['/metrics', '/'];
 
@@ -164,9 +164,6 @@ const enableHttpLogger = (app) => {
   app.use(expressLogger);
 };
 
-module.exports.logError = logError;
-module.exports.logInfo = logInfo;
-module.exports.logDebug = logDebug;
-module.exports.logWarn = logWarn;
-module.exports.logFatal = logFatal;
-module.exports.enableHttpLogger = enableHttpLogger;
+export { logError, logInfo, logDebug, logWarn, logFatal, enableHttpLogger };
+
+

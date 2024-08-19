@@ -1,9 +1,12 @@
 import express from 'express';
 import session from 'express-session';
-import passport from './src/config/passport.js';       // Add ".js" if needed
-import authRoutes from './src/routes/authRoutes.js';  // Add ".js" if needed
+import passport from './src/config/passport.js';
+import authRoutes from './src/routes/authRoutes.js';
 import dotenv from 'dotenv';
+import cors from 'cors'
 
+
+import fileUpload from 'express-fileupload';
 
 
 dotenv.config();
@@ -13,6 +16,8 @@ const app = express();
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(cors());
+app.use(fileUpload());
 app.use(session({
   secret: process.env.SECRET_SESSION_KEY,
   resave: false,
