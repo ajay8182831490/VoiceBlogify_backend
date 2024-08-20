@@ -1,8 +1,15 @@
 import express from 'express';
 import passport from '../config/passport.js';
-import { registerUser, logoutUser } from '../controller/authController.js';
+
+import rateLimit from 'express-rate-limit';
+import { registerUser, logoutUser, resetPassword } from '../controller/authController.js';
 
 const router = express.Router();
+const otpRateLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute window
+  max: 2, // limit each IP to 5 requests per windowMs
+  message: "Too many OTP requests from this IP, please try again after an hour"
+});
 
 
 router.get('/login', (req, res) => {
@@ -26,5 +33,7 @@ router.get('/auth/google/callback',
 
 router.post('/register', registerUser);
 router.get('/logout', logoutUser);
+router.post('/otp', otpRateLimiter, otpGeneration)
+router.put('/resetPassword', otpRateLimiter, resetPassword)
 
 export default router;

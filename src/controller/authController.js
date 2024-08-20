@@ -3,9 +3,16 @@ import { PrismaClient } from '@prisma/client';
 import { hashPassword } from '../utils/hashPassword.js';
 import { logError, logInfo } from '../utils/logger.js';
 import { fileURLToPath } from 'url';
+import { generateOTP, sendEmailforOtp } from '../utils/util.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const prisma = new PrismaClient();
+const rateLimit = require('express-rate-limit');
+
+const validateEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
 
 export const registerUser = async (req, res) => {
   const { email, password, name } = req.body;
@@ -58,7 +65,50 @@ export const resetPassword = async (req, res) => {
   try {
     // here firstle verify the user and  expiry time link and after that we will verify the otp
 
-    const { otp, email } = req.body;
+    const { otp, email, newPassword } = req.body;
+
+    if (!otp || !email || newPassword) {
+      return res.status(400).json({ message: 'missing field required' });
+    }
+
+    const existingUser = await prisma.user.findUnique({
+      where: {
+        email
+      }
+    })
+    if (!existingUser) {
+      return res.status(402).json({ message: "user not exist" });
+
+    }
+    const { expiryTime: storedExpiryTime, otp: storedOtp } = existingUser;
+
+    if (Date.now() > storedExpiryTime) {
+      await prisma.user.update({
+        where: { email },
+        data: { otp: "", expiryTime: null }
+      });
+      return res.status(402).json({ message: "OTP has expired. Please request a new one." });
+    }
+
+    if (otp !== storedOtp) {
+      return res.status(401).json({ message: "Invalid OTP." });
+    }
+
+    // now here we will HASHED THE PASSWORD
+    const hashedPassword = await hashPassword(newPassword);
+
+    await prisma.user.update({
+      where: {
+        email
+      }, data: {
+        otp: "",
+        expiryTime: null,
+        password: hashedPassword
+
+      }
+    })
+    res.status(200).json({ message: "Password reset successful." });
+
 
 
   } catch (ex) {
@@ -66,4 +116,48 @@ export const resetPassword = async (req, res) => {
     res.status(500).json({ message: "error occur during reseting the passowrd" })
 
   }
+}
+
+
+export const otpGeneration = async (req, res) => {
+
+  logInfo(`Going to send the otp for the reset password for user ${req.email}`, path.basename(__filename), otpGeneration);
+  try {
+
+    const { email } = req.body;
+    if (!email || !validateEmail(email)) {
+      return res.status(400).json({ message: "Invalid email format" });
+    }
+
+    const existingUser = await prisma.user.findUnique({
+      where: {
+        email
+      }
+    });
+    if (!existingUser) {
+      return res.status(402).json({ message: "user not exist" });
+    }
+    const otp = generateOTP();
+    try {
+      await sendEmailforOtp(email, otp);
+    } catch (emailError) {
+      logError(emailError, path.basename(__filename));
+      return res.status(500).json({ message: 'Failed to send OTP email' });
+    }
+    await prisma.user.update(({
+      where: { email }, data: {
+        otp: otp,
+        expiryTime: Date.now() + 3 * 60 * 1000,
+      }
+    }))
+
+    res.status(200).json({ message: "otp has send successfully" });
+
+
+
+  } catch (ex) {
+    logError(ex, path.basename(__filename));
+    res.status(500).json({ message: 'Internal error' });
+  }
+
 }

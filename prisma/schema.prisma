@@ -21,6 +21,8 @@ model User {
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
   name      String?
+  expiryTime  DateTime?
+  otp   Int?
   tokens         Token[]    
   subscriptions  Subscription[] 
   freeTrialStart DateTime?  
