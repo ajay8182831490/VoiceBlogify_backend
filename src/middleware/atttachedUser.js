@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+
 
 const attachUserId = (req, res, next) => {
     if (req.isAuthenticated() && req.user) {

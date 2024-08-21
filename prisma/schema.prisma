@@ -36,12 +36,12 @@ model Token {
   user          User       @relation(fields: [userId], references: [id])
   platform      Platform   
   platformUserId String    // Unique ID for the user's account on the platform
-  accountName   String?    // Optional: Name or username of the account
+  // Optional: Name or username of the account
   accessToken   String     // Access token for API requests
   refreshToken  String?    // Refresh token, if applicable
-  expiresAt     DateTime   // Token expiration time
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+    // Token expiration time
+ 
+ 
 }
 model Payment {
   id              Int            @id @default(autoincrement())

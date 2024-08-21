@@ -2,12 +2,20 @@
 import { PrismaClient } from '@prisma/client';
 import { hashPassword } from '../utils/hashPassword.js';
 import { logError, logInfo } from '../utils/logger.js';
+import { sendEmailforOtp } from '../utils/util.js';
 import { fileURLToPath } from 'url';
-import { generateOTP, sendEmailforOtp } from '../utils/util.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const prisma = new PrismaClient();
-const rateLimit = require('express-rate-limit');
+//const rateLimit = require('express-rate-limit');
+//
+import rateLimit from 'express-rate-limit';
+const generateOTP = () => {
+  const otpLength = 6;
+  const min = Math.pow(10, otpLength - 1);
+  const max = Math.pow(10, otpLength) - 1;
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 
 const validateEmail = (email) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

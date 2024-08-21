@@ -2,7 +2,8 @@ import express from 'express';
 import passport from '../config/passport.js';
 
 import rateLimit from 'express-rate-limit';
-import { registerUser, logoutUser, resetPassword } from '../controller/authController.js';
+import { ensureAuthenticated } from '../middleware/authMiddleware.js';
+import { registerUser, logoutUser, resetPassword, otpGeneration } from '../controller/authController.js';
 
 const router = express.Router();
 const otpRateLimiter = rateLimit({
@@ -32,7 +33,7 @@ router.get('/auth/google/callback',
 
 
 router.post('/register', registerUser);
-router.get('/logout', logoutUser);
+router.get('/logout', ensureAuthenticated, logoutUser);
 router.post('/otp', otpRateLimiter, otpGeneration)
 router.put('/resetPassword', otpRateLimiter, resetPassword)
 
