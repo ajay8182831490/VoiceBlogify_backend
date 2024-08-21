@@ -4,6 +4,7 @@ import path from 'path'
 import { fileURLToPath } from 'url';
 
 import { PrismaClient } from "@prisma/client";
+import { linkedinMiddleware } from "../middleware/linkedinMiddleware.js";
 
 const prisma = new PrismaClient();
 const clientId = process.env.lclientid;
@@ -13,56 +14,24 @@ const scope = encodeURIComponent(process.env.lscope);
 
 const __filename = fileURLToPath(import.meta.url);
 export const connect_to_linkedin = async (req, res) => {
-    logInfo(`going to connect the user ${req.userId} with linkedin `, path.basename(__filename), connect_to_linkedin);
+    logInfo(`Connecting user ${req.userId} with LinkedIn`, path.basename(__filename), connect_to_linkedin);
 
     try {
-        const authorizationCode = req.query.code;
-        const accessToken = await getAccessToken(authorizationCode);
+        const accessToken = req.linkedinToken; // Use the token set by the middleware
+        const personId = req.personId; // Use the LinkedIn user ID set by the middleware
 
-
-        try {
-            const response = await fetch('https://api.linkedin.com/v2/userinfo', {
-                headers: {
-                    Authorization: `Bearer ${accessToken}`,
-
-                },
-            });
-            console.log(response)
-            if (response.ok) {
-                const data = await response.json();
-                console.log('User ID:', data);
-                return data;
-            } else {
-                console.error('Error fetching user ID:', response.status, response.statusText);
-                const errorData = await response.json();
-                console.error('Error Details:', errorData);
-            }
-        } catch (error) {
-            console.error('Error fetching user ID:', error.message);
-        }
-
-
-
-
-        // await prisma.user.create({
-        //     where: { userId: req.userId }, data: {
-        //         platform: 'likedin',
-        //         token: accessToken.access_token,
-
-        //     }
-        // })
-        console.log(userResponse)
-        res.status(200).json({ Message: "succesfully connected" });
-    } catch (ex) {
-        logError(ex, path.basename(__filename));
-        res.status(500).json("internal error");
-
+        res.status(200).json({ message: "Successfully connected to LinkedIn", personId, accessToken });
+    } catch (error) {
+        logError(`Error connecting to LinkedIn: ${error.message}`, path.basename(__filename));
+        res.status(500).json({ error: "Internal error while connecting to LinkedIn" });
     }
-}
+};
 
 
 
-async function getAccessToken(authorizationCode) {
+
+
+export async function getAccessToken(authorizationCode) {
     const url = 'https://www.linkedin.com/oauth/v2/accessToken';
     const params = new URLSearchParams({
         grant_type: 'authorization_code',
