@@ -1,8 +1,9 @@
-const date = require('date-and-time');
-const crypto = require('crypto');
-const nodemailer = require('nodemailer');
+//const date = require('date-and-time');
+//const crypto = require('crypto');
+//const nodemailer = require('nodemailer');
 
-
+import crypto from 'crypto';
+import nodemailer from 'nodemailer'
 
 function getDate() {
     let now = new Date();
@@ -85,7 +86,7 @@ const sendEmailforOtp = (email, otp) => {
         }
     });
 };
-function generateOTP() {
+const generateOTP = () => {
     const otpLength = 6;
     const min = Math.pow(10, otpLength - 1);
     const max = Math.pow(10, otpLength) - 1;
@@ -97,12 +98,13 @@ function generateOTP() {
 
 
 
-module.exports = {
+export {
     getDate,
     addMinuteToCurrentDate,
     getToken,
     sendEmail,
-    generateOTP, sendEmailforOtp
+    generateOTP,
+    sendEmailforOtp
 
 
 }

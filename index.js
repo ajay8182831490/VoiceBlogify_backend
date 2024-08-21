@@ -4,6 +4,7 @@ import passport from './src/config/passport.js';
 import authRoutes from './src/routes/authRoutes.js';
 import dotenv from 'dotenv';
 import cors from 'cors'
+import linkdeinRoutes from './src/linkedin/routes/LinkedinRoutes.js'
 
 
 import fileUpload from 'express-fileupload';
@@ -28,6 +29,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.use(authRoutes);
+app.use(linkdeinRoutes)
 
 app.listen(port, () => {
   console.log("Server is running on port", port);
