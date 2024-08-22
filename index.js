@@ -7,7 +7,7 @@ import cors from 'cors'
 import linkdeinRoutes from './src/linkedin/routes/LinkedinRoutes.js'
 
 
-import fileUpload from 'express-fileupload';
+
 
 
 dotenv.config();
@@ -18,7 +18,7 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cors());
-app.use(fileUpload());
+
 app.use(session({
   secret: process.env.SECRET_SESSION_KEY,
   resave: false,
