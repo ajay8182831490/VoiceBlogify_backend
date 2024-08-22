@@ -11,7 +11,7 @@ export const linkedinMiddleware = async (req, res, next) => {
     try {
         const existingToken = await prisma.token.findFirst({
             where: {
-                userId: req.userId,
+                userId: 3/*req.userId*/,
                 platform: 'LINKEDIN'
             }
         });
@@ -27,6 +27,7 @@ export const linkedinMiddleware = async (req, res, next) => {
             if (response.ok) {
                 req.personId = existingToken.platformUserId;
                 req.linkedinToken = existingToken.accessToken;
+
                 return next();
             } else {
                 // Token might be expired or invalid, fetch a new one
@@ -54,6 +55,7 @@ export const linkedinMiddleware = async (req, res, next) => {
                     });
 
                     req.personId = data.sub;
+
                     return next();
                 } else {
                     return res.status(401).json({ message: "Failed to retrieve user info with new token" });
@@ -76,7 +78,7 @@ export const linkedinMiddleware = async (req, res, next) => {
                 const data = await response.json();
                 await prisma.token.create({
                     data: {
-                        userId: req.userId,
+                        userId: 3/*req.userId*/,
                         platform: 'LINKEDIN',
                         accessToken: newAccessToken,
                         platformUserId: data.sub
@@ -84,6 +86,7 @@ export const linkedinMiddleware = async (req, res, next) => {
                 });
 
                 req.personId = data.sub;
+
                 next();
             } else {
                 res.status(401).json({ message: "Failed to retrieve user info, please try again later" });
