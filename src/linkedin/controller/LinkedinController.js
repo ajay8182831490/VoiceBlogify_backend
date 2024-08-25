@@ -218,7 +218,7 @@ const uploadVideoToLinkedIn = async (accessToken, personId, video) => {
 
 const createLinkedInPost = async (accessToken, personId, description, imageUrls = [], videoUrl = null) => {
     try {
-
+        console.log(description, videoUrl)
 
         const postData = {
             author: `urn:li:person:${personId}`,
@@ -250,7 +250,7 @@ const createLinkedInPost = async (accessToken, personId, description, imageUrls 
                 "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
             }
         };
-
+        console.log(postData);
 
 
         const response = await fetch('https://api.linkedin.com/v2/ugcPosts', {
