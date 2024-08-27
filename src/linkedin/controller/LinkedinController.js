@@ -84,6 +84,10 @@ export const share_linkedin = async (req, res) => {
 
 
 
+
+
+
+
         if (images.length && video) {
             return res.status(400).json({ message: "You can only post either images or a video, not both." });
         }
@@ -107,6 +111,8 @@ export const share_linkedin = async (req, res) => {
             const videoResponse = await uploadVideoToLinkedIn(linkedinToken, personId, video);
             videoUrl = videoResponse.mediaUrl;
         }
+
+
 
         const postResponse = await createLinkedInPost(linkedinToken, personId, description, imageUrls, videoUrl);
 
@@ -172,8 +178,7 @@ const uploadImageToLinkedIn = async (accessToken, personId, image) => {
 
 const uploadVideoToLinkedIn = async (accessToken, personId, video) => {
     try {
-
-
+        // Register upload and get upload URL
         const uploadUrlResponse = await fetch('https://api.linkedin.com/v2/assets?action=registerUpload', {
             method: 'POST',
             headers: {
@@ -192,20 +197,18 @@ const uploadVideoToLinkedIn = async (accessToken, personId, video) => {
             })
         });
 
-
+        if (!uploadUrlResponse.ok) {
+            const errorData = await uploadUrlResponse.json();
+            logError(`Error registering upload: ${uploadUrlResponse.status} ${uploadUrlResponse.statusText}`, path.basename(__filename));
+            logError(`Error Details: ${JSON.stringify(errorData)}`, path.basename(__filename));
+            throw new Error("Failed to register upload on LinkedIn");
+        }
 
         const uploadUrlData = await uploadUrlResponse.json();
-
-
         const { uploadUrl } = uploadUrlData.value.uploadMechanism["com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"];
 
-        await fetch(uploadUrl, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': video.mimetype
-            },
-            body: video.buffer
-        });
+        await uploadVideo(uploadUrl, video[0].buffer);
+
 
         return {
             mediaUrl: uploadUrlData.value.asset
@@ -216,9 +219,11 @@ const uploadVideoToLinkedIn = async (accessToken, personId, video) => {
     }
 };
 
+
+
 const createLinkedInPost = async (accessToken, personId, description, imageUrls = [], videoUrl = null) => {
     try {
-        console.log(description, videoUrl)
+
 
         const postData = {
             author: `urn:li:person:${personId}`,
@@ -250,7 +255,6 @@ const createLinkedInPost = async (accessToken, personId, description, imageUrls 
                 "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
             }
         };
-        console.log(postData);
 
 
         const response = await fetch('https://api.linkedin.com/v2/ugcPosts', {
@@ -262,7 +266,6 @@ const createLinkedInPost = async (accessToken, personId, description, imageUrls 
             },
             body: JSON.stringify(postData)
         });
-
 
 
 
@@ -279,5 +282,38 @@ const createLinkedInPost = async (accessToken, personId, description, imageUrls 
         throw new Error("LinkedIn post creation failed");
     }
 };
+
+const uploadVideo = async (uploadUrl, videoBuffer) => {
+    try {
+        const response = await fetch(uploadUrl, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'video/mp4'
+            },
+            body: videoBuffer
+        });
+
+
+
+
+        if (!response.ok) {
+            const errorDetails = await response.text();
+            throw new Error(`Failed to upload video: ${response.statusText} - ${errorDetails}`);
+        }
+
+
+        const responseBody = await response.text();
+
+
+        return responseBody;
+
+    } catch (error) {
+        logError("error in uploading video", path.basename(__filename))
+        console.error('Error uploading video:', error.message);
+        throw new Error('Video upload failed');
+    }
+};
+
+
 
 
