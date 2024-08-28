@@ -35,11 +35,17 @@ model Token {
   userId        Int      
   user          User       @relation(fields: [userId], references: [id])
   platform      Platform   
-  platformUserId String    // Unique ID for the user's account on the platform
+  platformUserId String?    // Unique ID for the user's account on the platform
   // Optional: Name or username of the account
   accessToken   String     // Access token for API requests
   refreshToken  String?    // Refresh token, if applicable
     // Token expiration time
+
+  postUrns    String[]  // Store multiple post URNs
+
+  expiryTime  String?
+
+  //@@unique([userId, platform])
  
  
 }

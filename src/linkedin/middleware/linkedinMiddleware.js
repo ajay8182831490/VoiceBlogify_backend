@@ -6,12 +6,11 @@ const prisma = new PrismaClient();
 
 
 
-
 export const linkedinMiddleware = async (req, res, next) => {
     try {
         const existingToken = await prisma.token.findFirst({
             where: {
-                userId: 3/*req.userId*/,
+                userId: req.userId,
                 platform: 'LINKEDIN'
             }
         });
@@ -78,7 +77,7 @@ export const linkedinMiddleware = async (req, res, next) => {
                 const data = await response.json();
                 await prisma.token.create({
                     data: {
-                        userId: 3/*req.userId*/,
+                        userId: req.userId,
                         platform: 'LINKEDIN',
                         accessToken: newAccessToken,
                         platformUserId: data.sub

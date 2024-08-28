@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Token" ALTER COLUMN "expiryTime" DROP NOT NULL,
+ALTER COLUMN "expiryTime" SET DATA TYPE TEXT;

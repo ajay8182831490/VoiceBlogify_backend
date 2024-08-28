@@ -14,7 +14,7 @@ const scope = encodeURIComponent(process.env.lscope);
 
 const __filename = fileURLToPath(import.meta.url);
 export const connect_to_linkedin = async (req, res) => {
-    logInfo(`Connecting user ${3/*req.userId*/} with LinkedIn`, path.basename(__filename), connect_to_linkedin);
+    logInfo(`Connecting user ${req.userId} with LinkedIn`, path.basename(__filename), connect_to_linkedin);
 
     try {
         const accessToken = req.linkedinToken; // Use the token set by the middleware
@@ -115,6 +115,33 @@ export const share_linkedin = async (req, res) => {
 
 
         const postResponse = await createLinkedInPost(linkedinToken, personId, description, imageUrls, videoUrl);
+
+        const existingToken = await prisma.token.findUnique({
+            where: {
+                userId_platform_accessToken: {
+                    userId: req.userId,
+                    platform: 'LINKEDIN',
+                    accessToken: req.accessToken,
+                }
+            },
+            select: {
+                postUrn: true
+            }
+        });
+
+        const existingPostUrns = existingToken?.postUrn || [];
+        const updatedPostUrns = [...existingPostUrns, postResponse.id];
+
+        await prisma.token.update({
+            where: {
+                userId: req.userId,
+                platform: 'LINKEDIN',
+                accessToken: req.accessToken,
+
+            }, data: {
+                postUrn: updatedPostUrns
+            }
+        })
 
 
 

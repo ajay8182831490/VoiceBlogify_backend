@@ -21,6 +21,9 @@ CREATE TABLE "User" (
     "googleId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "name" TEXT,
+    "expiryTime" TIMESTAMP(3),
+    "otp" INTEGER,
     "freeTrialStart" TIMESTAMP(3),
     "role" "UserRole" NOT NULL DEFAULT 'USER',
 
@@ -33,12 +36,9 @@ CREATE TABLE "Token" (
     "userId" INTEGER NOT NULL,
     "platform" "Platform" NOT NULL,
     "platformUserId" TEXT NOT NULL,
-    "accountName" TEXT,
     "accessToken" TEXT NOT NULL,
     "refreshToken" TEXT,
-    "expiresAt" TIMESTAMP(3) NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "postUrn" JSONB NOT NULL,
 
     CONSTRAINT "Token_pkey" PRIMARY KEY ("id")
 );
@@ -83,6 +83,9 @@ CREATE TABLE "Subscription" (
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_googleId_key" ON "User"("googleId");
 
 -- AddForeignKey
 ALTER TABLE "Token" ADD CONSTRAINT "Token_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
