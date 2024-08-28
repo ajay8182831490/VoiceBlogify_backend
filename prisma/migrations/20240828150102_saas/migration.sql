@@ -35,10 +35,11 @@ CREATE TABLE "Token" (
     "id" SERIAL NOT NULL,
     "userId" INTEGER NOT NULL,
     "platform" "Platform" NOT NULL,
-    "platformUserId" TEXT NOT NULL,
+    "platformUserId" TEXT,
     "accessToken" TEXT NOT NULL,
     "refreshToken" TEXT,
-    "postUrn" JSONB NOT NULL,
+    "postUrns" TEXT[],
+    "expiryTime" TEXT,
 
     CONSTRAINT "Token_pkey" PRIMARY KEY ("id")
 );

@@ -45,7 +45,7 @@ model Token {
 
   expiryTime  String?
 
-  //@@unique([userId, platform])
+  @@unique([userId, platform])
  
  
 }

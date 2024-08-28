@@ -4,20 +4,18 @@ import { getAccessToken } from "../controller/LinkedinController.js";
 
 const prisma = new PrismaClient();
 
-
-
 export const linkedinMiddleware = async (req, res, next) => {
     try {
         const existingToken = await prisma.token.findFirst({
             where: {
                 userId: req.userId,
-                platform: 'LINKEDIN'
-            }
+                platform: "LINKEDIN",
+            },
         });
 
         if (existingToken) {
             // Verify if the existing token is still valid by making a lightweight API call
-            const response = await fetch('https://api.linkedin.com/v2/userinfo', {
+            const response = await fetch("https://api.linkedin.com/v2/userinfo", {
                 headers: {
                     Authorization: `Bearer ${existingToken.accessToken}`,
                 },
@@ -35,11 +33,14 @@ export const linkedinMiddleware = async (req, res, next) => {
                 req.linkedinToken = newAccessToken;
 
                 // Call the API for user info to validate the new token
-                const userInfoResponse = await fetch('https://api.linkedin.com/v2/userinfo', {
-                    headers: {
-                        Authorization: `Bearer ${newAccessToken}`,
-                    },
-                });
+                const userInfoResponse = await fetch(
+                    "https://api.linkedin.com/v2/userinfo",
+                    {
+                        headers: {
+                            Authorization: `Bearer ${newAccessToken}`,
+                        },
+                    }
+                );
 
                 if (userInfoResponse.ok) {
                     const data = await userInfoResponse.json();
@@ -49,15 +50,17 @@ export const linkedinMiddleware = async (req, res, next) => {
                         },
                         data: {
                             accessToken: newAccessToken,
-                            platformUserId: data.sub
-                        }
+                            platformUserId: data.sub,
+                        },
                     });
 
                     req.personId = data.sub;
 
                     return next();
                 } else {
-                    return res.status(401).json({ message: "Failed to retrieve user info with new token" });
+                    return res
+                        .status(401)
+                        .json({ message: "Failed to retrieve user info with new token" });
                 }
             }
         } else {
@@ -67,7 +70,7 @@ export const linkedinMiddleware = async (req, res, next) => {
             req.linkedinToken = newAccessToken;
 
             // Call the API for user info
-            const response = await fetch('https://api.linkedin.com/v2/userinfo', {
+            const response = await fetch("https://api.linkedin.com/v2/userinfo", {
                 headers: {
                     Authorization: `Bearer ${newAccessToken}`,
                 },
@@ -78,21 +81,28 @@ export const linkedinMiddleware = async (req, res, next) => {
                 await prisma.token.create({
                     data: {
                         userId: req.userId,
-                        platform: 'LINKEDIN',
+                        platform: "LINKEDIN",
                         accessToken: newAccessToken,
-                        platformUserId: data.sub
-                    }
+                        platformUserId: data.sub,
+                    },
                 });
 
                 req.personId = data.sub;
 
                 next();
             } else {
-                res.status(401).json({ message: "Failed to retrieve user info, please try again later" });
+                res
+                    .status(401)
+                    .json({
+                        message: "Failed to retrieve user info, please try again later",
+                    });
             }
         }
     } catch (error) {
-        logError(`Error in LinkedIn middleware: ${error.message}`, path.basename(__filename));
+        logError(
+            `Error in LinkedIn middleware: ${error.message}`,
+            path.basename(__filename)
+        );
         res.status(500).json({ message: "Internal error in LinkedIn middleware" });
     }
 };
