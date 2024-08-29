@@ -67,6 +67,7 @@ export const getRedditToken = async (code, userId) => {
         }
 
         const data = await response.json();
+        console.log(data)
 
         if (data.access_token) {
             await prisma.token.create({
@@ -103,4 +104,27 @@ export const getRedditToken = async (code, userId) => {
 
 export const check = async (req, res) => {
     res.json("helo");
+};
+
+
+export const userInfo = async (req, res) => {
+
+}
+
+export const fetchFlairTemplates = async (req, res) => {
+
+    const { subreddit } = req.body;
+
+    console.log(subreddit)
+    try {
+        const response = await fetch(`https://www.reddit.com/r/${subreddit}/api/flairlist.json`);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch flair templates: ${response.statusText}`);
+        }
+        const data = await response.json();
+        res.status(200).json(data);
+    } catch (error) {
+        logError(`Error fetching flair templates: ${error.message}`, path.basename(__filename));
+        return null;
+    }
 };
