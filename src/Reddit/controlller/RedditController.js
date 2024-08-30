@@ -15,7 +15,9 @@ export const connect_to_reddit = async (req, res) => {
     );
 
     try {
-        res.status(201).json({ message: "connected successully" });
+
+        return;
+        //res.status(201).json({ message: "connected successully" });
     } catch (error) {
         logError(error, path.basename(__filename), connect_to_reddit);
         res.status(500).json({ message: "Internal server error" });
@@ -29,7 +31,7 @@ export const to_reddit = async (req, res) => {
     const redditAuthUrl = `https://www.reddit.com/api/v1/authorize?client_id=${process.env.REDDIT_CLIENT
         }&response_type=code&state=${userId}&redirect_uri=${encodeURIComponent(
             redirectUri
-        )}&duration=permanent&scope=read,submit`;
+        )}&duration=permanent&scope=read,submit,flair,identity,mysubreddits,subscribe,modflair`;
 
     logInfo(
         `Redirecting user ${userId} to Reddit authorization`,
@@ -67,7 +69,7 @@ export const getRedditToken = async (code, userId) => {
         }
 
         const data = await response.json();
-        console.log(data)
+        console.log(data);
 
         if (data.access_token) {
             await prisma.token.create({
@@ -112,19 +114,41 @@ export const userInfo = async (req, res) => {
 }
 
 export const fetchFlairTemplates = async (req, res) => {
+    // const { subreddit } = req.body; // Example subreddit
+    const { Reddit_accessToken } = req;
 
-    const { subreddit } = req.body;
+    const subreddit = "abhi_g003"
 
-    console.log(subreddit)
     try {
-        const response = await fetch(`https://www.reddit.com/r/${subreddit}/api/flairlist.json`);
+        const response = await fetch(`https://oauth.reddit.com/r/${subreddit}/api/link_flair_v2`, {
+            headers: {
+                'Authorization': `Bearer ${Reddit_accessToken}`,
+                'User-Agent': process.env.USER_AGENT,
+            }
+        });
+
+
         if (!response.ok) {
-            throw new Error(`Failed to fetch flair templates: ${response.statusText}`);
+            const errorText = await response.text();
+            logError(`Failed to fetch flair templates: ${response.status} - ${response.statusText} - ${errorText}`, path.basename(__filename));
+            return res.status(response.status).json({ message: `Failed to fetch flair templates: ${response.statusText}`, error: errorText });
         }
+
         const data = await response.json();
-        res.status(200).json(data);
+
+
+
+        const flairTemplates = data;
+
+
+        const flairIds = flairTemplates.map(template => ({
+            id: template.id,
+            text: template.text
+        }));
+
+        res.status(200).json({ flairIds });
     } catch (error) {
         logError(`Error fetching flair templates: ${error.message}`, path.basename(__filename));
-        return null;
+        res.status(500).json({ error: error.message });
     }
 };

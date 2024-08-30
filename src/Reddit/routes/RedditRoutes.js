@@ -12,11 +12,11 @@ const router = express.Router();
 
 router.get('/auth/reddit', ensureAuthenticated, attachUserId, to_reddit);
 router.get('/auth/reddit/callback', ensureAuthenticated, attachUserId, checkAndRenewRedditToken, connect_to_reddit)
-router.post('/reddit/submit',/* ensureAuthenticated, checkAndRenewRedditToken,*/ submitRedditPost);
+router.post('/reddit/submit', /*ensureAuthenticated, checkAndRenewRedditToken,*/ submitRedditPost);
 router.get('/reddit/analytics/:postId', ensureAuthenticated, attachUserId, checkAndRenewRedditToken, getRedditPostAnalytics);
 router.get('/reddit/subscribed', ensureAuthenticated, attachUserId, checkAndRenewRedditToken, getUserSubscribedSubreddits);
 
-router.get('/reddit/flair', fetchFlairTemplates)
+router.get('/reddit/flair', ensureAuthenticated, attachUserId, checkAndRenewRedditToken, fetchFlairTemplates)
 
 
 export default router;
