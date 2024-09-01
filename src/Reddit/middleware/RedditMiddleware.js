@@ -79,6 +79,7 @@ const checkAndRenewRedditToken = async (req, res, next) => {
                     }&response_type=code&state=${userId}&redirect_uri=${encodeURIComponent(
                         redirectUri
                     )}&duration=permanent&scope=read,submit,flair,identity,mysubreddits,subscribe,modflair`;
+                ///*,flair,identity,mysubreddits,subscribe,modflair*/
 
                 logInfo(
                     `Redirecting user ${userId} to Reddit authorization`,
@@ -188,6 +189,8 @@ export const submitRedditPost = async (req, res) => {
             params.append('flair_text', flairText);
         }
 
+        console.log(params)
+
         const response = await fetch('https://oauth.reddit.com/api/submit', {
             method: 'POST',
             headers: {
@@ -198,8 +201,7 @@ export const submitRedditPost = async (req, res) => {
             body: params.toString(),
         });
 
-        console.log(`Response Status: ${response.status}`);
-        console.log(`Response Headers: ${JSON.stringify([...response.headers])}`);
+
 
         if (!response.ok) {
             const contentType = response.headers.get('content-type');

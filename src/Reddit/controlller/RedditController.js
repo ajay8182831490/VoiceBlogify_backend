@@ -32,6 +32,7 @@ export const to_reddit = async (req, res) => {
         }&response_type=code&state=${userId}&redirect_uri=${encodeURIComponent(
             redirectUri
         )}&duration=permanent&scope=read,submit,flair,identity,mysubreddits,subscribe,modflair`;
+    //,flair,identity,mysubreddits,subscribe,modflair
 
     logInfo(
         `Redirecting user ${userId} to Reddit authorization`,

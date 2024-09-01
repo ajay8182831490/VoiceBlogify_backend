@@ -29,6 +29,7 @@ model User {
   role           UserRole   @default(USER)
 
   payments         Payment[]
+  features     Feature []
 }
 model Token {
   id            Int        @id @default(autoincrement())
@@ -63,7 +64,11 @@ model Feature {
   id          Int       @id @default(autoincrement())
   name        String
   description String?
-  plan        Plan      // Enum to define which plan has this feature
+  plan        Plan  
+  
+    // Enum to define which plan has this feature
+     userId Int
+      user            User           @relation(fields: [userId], references: [id])
 }
 model Subscription {
   id                    Int        @id @default(autoincrement())
