@@ -148,7 +148,7 @@ const renewRedditToken = async (refreshToken) => {
     }
 };
 
-export { checkAndRenewRedditToken };
+
 
 export const submitRedditPost = async (req, res) => {
 
@@ -158,7 +158,7 @@ export const submitRedditPost = async (req, res) => {
         subreddit, title, text, kind = 'self', url = "", nsfw = false, spoiler = false, sendreplies = true, flairId, flairText,
     } = req.body;
 
-    const { Reddit_accessToken } = req.body;
+    const { Reddit_accessToken } = req;
 
     const modhash = req.headers['x-modhash'] || '';
     try {
@@ -274,3 +274,4 @@ export const getUserSubscribedSubreddits = async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 };
+export { checkAndRenewRedditToken };

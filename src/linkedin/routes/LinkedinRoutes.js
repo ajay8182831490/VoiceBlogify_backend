@@ -6,6 +6,8 @@ import { ensureAuthenticated } from "../../middleware/authMiddleware.js";
 import attachUserId from "../../middleware/atttachedUser.js";
 import { linkedinMiddleware } from '../middleware/linkedinMiddleware.js';
 import multer from 'multer';
+
+
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 const router = express.Router();

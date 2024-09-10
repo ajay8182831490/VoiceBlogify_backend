@@ -28,8 +28,11 @@ model User {
   freeTrialStart DateTime?  
   role           UserRole   @default(USER)
 
-  payments         Payment[]
-  features     Feature []
+  profilepic String?
+
+    payments         Payment[]
+    features     Feature []
+   blogCount  Int       @default(0)
 }
 model Token {
   id            Int        @id @default(autoincrement())
@@ -42,9 +45,10 @@ model Token {
   refreshToken  String?    // Refresh token, if applicable
     // Token expiration time
 
-  postUrns    String[]  // Store multiple post URNs
+  postUrns    String[]   // Store multiple post URNs
 
   expiryTime  String?
+  
 
   @@unique([userId, platform])
  
@@ -95,8 +99,8 @@ enum Platform {
 }
 
 enum Plan {
-  FREE_TRIAL
-  BASIC
+  FREE
+  
   PREMIUM
 }
 

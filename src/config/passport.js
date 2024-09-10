@@ -43,12 +43,15 @@ passport.use(new GoogleStrategy({
 
 
     let user = await prisma.user.findUnique({ where: { googleId: profile.id } });
+
+
     if (!user) {
       user = await prisma.user.create({
         data: {
           googleId: profile.id,
           name: profile.displayName,
-          email: profile.emails && profile.emails[0] && profile.emails[0].value  // Attempting to access the email field
+          email: profile.emails && profile.emails[0] && profile.emails[0].value,
+          profilepic: profile.photos && profile.photos[0] && profile.photos[0].value
         }
       });
     }

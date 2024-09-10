@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 
-export const connect_to_reddit = async (req, res) => {
+export const connect_to_reddit = async (req, res, next) => {
     logInfo(
         `Connecting user ${req.userId} to Reddit platform`,
         path.basename(__filename),
@@ -15,7 +15,7 @@ export const connect_to_reddit = async (req, res) => {
     );
 
     try {
-
+        next();
         return;
         //res.status(201).json({ message: "connected successully" });
     } catch (error) {
