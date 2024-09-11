@@ -10,6 +10,7 @@ const prisma = new PrismaClient();
 //const rateLimit = require('express-rate-limit');
 //
 import rateLimit from 'express-rate-limit';
+import exp from 'constants';
 const generateOTP = () => {
   const otpLength = 6;
   const min = Math.pow(10, otpLength - 1);
@@ -168,4 +169,17 @@ export const otpGeneration = async (req, res) => {
     res.status(500).json({ message: 'Internal error' });
   }
 
+}
+export const checkAuth = async (req, res, next) => {
+  try {
+    if (req.isAuthenticated()) {
+
+      console.log(req.user);
+      return res.status(200).json({ authenticated: true, user: req.user });
+    }
+    return res.status(401).json({ authenticated: false });
+  } catch (ex) {
+    logError(ex, path.basename(__filename));
+    res.status(500).json({ message: 'Internal error' });
+  }
 }
