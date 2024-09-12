@@ -4,6 +4,7 @@ import { hashPassword } from '../utils/hashPassword.js';
 import { logError, logInfo } from '../utils/logger.js';
 import { sendEmailforOtp } from '../utils/util.js';
 import { fileURLToPath } from 'url';
+import path from 'path'
 
 const __filename = fileURLToPath(import.meta.url);
 const prisma = new PrismaClient();
@@ -32,7 +33,7 @@ export const registerUser = async (req, res) => {
     });
 
     if (existingUser) {
-      return res.status(400).send('User already exists');
+      return res.status(200).send('User already exists');
     }
 
     const hashedPassword = await hashPassword(password);
@@ -46,7 +47,7 @@ export const registerUser = async (req, res) => {
       }
     });
 
-    res.send('User registered successfully');
+    res.status(200).json({ message: "account created successfully" });
   } catch (err) {
     logError(err, path.basename(__filename));
     res.status(500).send('Error registering user');
@@ -173,9 +174,9 @@ export const otpGeneration = async (req, res) => {
 export const checkAuth = async (req, res, next) => {
   try {
     if (req.isAuthenticated()) {
+      console.log("inside here")
 
-      console.log(req.user);
-      return res.status(200).json({ authenticated: true, user: req.user });
+      return res.status(200).json({ authenticated: true, name: req.user.name, id: req.user.id, profilepic: req.user.profilepic });
     }
     return res.status(401).json({ authenticated: false });
   } catch (ex) {

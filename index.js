@@ -18,12 +18,19 @@ const app = express();
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5173', // Replace with your frontend URL
+  credentials: true, // Allow credentials (cookies) to be sent
+}));
 
 app.use(session({
   secret: process.env.SECRET_SESSION_KEY,
   resave: false,
-  saveUninitialized: false
+  saveUninitialized: false,
+  cookie: {
+    secure: false, // Set to true in production with HTTPS
+    httpOnly: true, // Prevent client-side JavaScript from accessing cookies
+  },
 }));
 
 app.use(passport.initialize());

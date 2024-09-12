@@ -12,18 +12,30 @@ const __filename = fileURLToPath(import.meta.url);
 const prisma = new PrismaClient();
 
 passport.use(new LocalStrategy(
-  async (username, password, done) => {
+  { usernameField: 'email', passwordField: 'password' }, // tell Passport to use 'email'
+  async (email, password, done) => {
     try {
-      logInfo(`Going to create an acccount for user with email ${username}`, path.basename(__filename), 'LocalStrategy');
-      const user = await prisma.user.findUnique({ where: { email: username } });
+      logInfo(`Looking for user with email: ${email}`, path.basename(__filename), 'LocalStrategy');
+
+      // Fetch the user from Prisma
+      const user = await prisma.user.findUnique({ where: { email } });
+
       if (!user) {
-        return done(null, false, { message: 'Incorrect username.' });
+        logInfo(`No user found with email: ${email}`, path.basename(__filename), 'LocalStrategy');
+        return done(null, false, { message: 'Incorrect email.' });
       }
+
+      // Check if the password matches
       const isMatch = await bcrypt.compare(password, user.password);
+
       if (!isMatch) {
+        logInfo('Password mismatch', path.basename(__filename), 'LocalStrategy');
         return done(null, false, { message: 'Incorrect password.' });
       }
+
+      logInfo('User authenticated successfully', path.basename(__filename), 'LocalStrategy');
       return done(null, user);
+
     } catch (err) {
       logError(err, path.basename(__filename));
       return done(err);

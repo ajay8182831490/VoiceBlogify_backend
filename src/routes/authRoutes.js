@@ -17,10 +17,35 @@ router.get('/login', (req, res) => {
   res.send('<form action="/login" method="post"><input type="text" name="name" /><input type="email" name="email" /><input type="password" name="password" /><button type="submit">Login</button></form>');
 });
 
-router.post('/login', passport.authenticate('local', {
-  successRedirect: '/',
-  failureRedirect: '/login'
-}));
+router.post('/login', (req, res, next) => {
+  console.log("Login endpoint called");
+
+  passport.authenticate('local', (err, user, info) => {
+    if (err) {
+      console.log("Error during authentication", err);
+      return next(err);
+    }
+
+    console.log(user, info)
+
+    // Log the failure message
+    if (!user) {
+      console.log("Authentication failed:", info);
+      return res.status(401).json({ message: info.message || 'Authentication failed' });
+    }
+
+    req.logIn(user, (err) => {
+      if (err) {
+        console.log("Error during req.logIn", err);
+        return next(err);
+      }
+
+      console.log("User successfully logged in");
+      return res.status(200).json({ message: 'Login successful', user });
+    });
+  })(req, res, next);
+});
+
 
 
 router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
