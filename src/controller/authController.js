@@ -13,7 +13,7 @@ const prisma = new PrismaClient();
 import rateLimit from 'express-rate-limit';
 import exp from 'constants';
 const generateOTP = () => {
-  const otpLength = 6;
+  const otpLength = 4;
   const min = Math.pow(10, otpLength - 1);
   const max = Math.pow(10, otpLength) - 1;
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -70,14 +70,19 @@ export const logoutUser = (req, res) => {
 
 
 export const resetPassword = async (req, res) => {
-  logInfo(`going to reset the password for the user ${req.email}`, path.basename(__filename), resetPassword);
+
+
+  const { email } = req.body;
+  logInfo(`going to reset the password for the user ${email}`, path.basename(__filename), resetPassword);
 
   try {
     // here firstle verify the user and  expiry time link and after that we will verify the otp
 
-    const { otp, email, newPassword } = req.body;
+    const { otp, email, password } = req.body;
 
-    if (!otp || !email || newPassword) {
+
+
+    if (!otp || !email || !password) {
       return res.status(400).json({ message: 'missing field required' });
     }
 
@@ -95,23 +100,23 @@ export const resetPassword = async (req, res) => {
     if (Date.now() > storedExpiryTime) {
       await prisma.user.update({
         where: { email },
-        data: { otp: "", expiryTime: null }
+        data: { otp: null, expiryTime: null }
       });
       return res.status(402).json({ message: "OTP has expired. Please request a new one." });
     }
 
-    if (otp !== storedOtp) {
+    if (otp != storedOtp) {
       return res.status(401).json({ message: "Invalid OTP." });
     }
 
     // now here we will HASHED THE PASSWORD
-    const hashedPassword = await hashPassword(newPassword);
+    const hashedPassword = await hashPassword(password);
 
     await prisma.user.update({
       where: {
         email
       }, data: {
-        otp: "",
+        otp: null,
         expiryTime: null,
         password: hashedPassword
 
@@ -130,11 +135,11 @@ export const resetPassword = async (req, res) => {
 
 
 export const otpGeneration = async (req, res) => {
-
-  logInfo(`Going to send the otp for the reset password for user ${req.email}`, path.basename(__filename), otpGeneration);
+  const { email } = req.body;
+  logInfo(`Going to send the otp for the reset password for user ${email}`, path.basename(__filename), otpGeneration);
   try {
 
-    const { email } = req.body;
+
     if (!email || !validateEmail(email)) {
       return res.status(400).json({ message: "Invalid email format" });
     }
@@ -157,7 +162,7 @@ export const otpGeneration = async (req, res) => {
     await prisma.user.update(({
       where: { email }, data: {
         otp: otp,
-        expiryTime: Date.now() + 3 * 60 * 1000,
+        expiryTime: new Date(Date.now() + 3 * 60 * 1000),
       }
     }))
 

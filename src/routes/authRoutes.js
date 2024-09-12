@@ -13,9 +13,9 @@ const otpRateLimiter = rateLimit({
 });
 
 
-router.get('/login', (req, res) => {
-  res.send('<form action="/login" method="post"><input type="text" name="name" /><input type="email" name="email" /><input type="password" name="password" /><button type="submit">Login</button></form>');
-});
+// router.get('/login', (req, res) => {
+//   res.send('<form action="/login" method="post"><input type="text" name="name" /><input type="email" name="email" /><input type="password" name="password" /><button type="submit">Login</button></form>');
+// });
 
 router.post('/login', (req, res, next) => {
   console.log("Login endpoint called");
@@ -59,7 +59,7 @@ router.get('/auth/google/callback',
 
 router.post('/register', registerUser);
 router.get('/logout', ensureAuthenticated, logoutUser);
-router.post('/otp', otpRateLimiter, otpGeneration)
+router.post('/otpGenrator', otpRateLimiter, otpGeneration)
 router.put('/resetPassword', otpRateLimiter, resetPassword)
 router.get('/status', checkAuth);
 
