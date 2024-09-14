@@ -27,32 +27,54 @@ const validateEmail = (email) => {
 export const registerUser = async (req, res) => {
   const { email, password, name } = req.body;
   logInfo(`going to register a new account for user email ${email} `, path.basename(__filename), registerUser);
+
   try {
+    // Check if the user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email: email }
     });
 
     if (existingUser) {
-      return res.status(200).send('User already exists');
+      return res.status(200).send({ message: 'User already exists', authenticated: false });
     }
 
+    // Hash the password
     const hashedPassword = await hashPassword(password);
 
-    await prisma.user.create({
+    // Create new user
+    const user = await prisma.user.create({
       data: {
-
         email: email,
         password: hashedPassword,
         name: name
       }
     });
 
-    res.status(200).json({ message: "account created successfully" });
+    // Log in the user after successful signup
+    req.login(user, (err) => {
+      if (err) {
+        logError(err, path.basename(__filename));
+        return res.status(500).json({ message: 'Login after signup failed' });
+      }
+
+      // Return success response
+      return res.status(201).json({
+        message: 'User registered and logged in successfully',
+        authenticated: true,
+        user: {
+          name: user.name,
+          id: user.id,
+          email: user.email
+        }
+      });
+    });
+
   } catch (err) {
     logError(err, path.basename(__filename));
-    res.status(500).send('Error registering user');
+    return res.status(500).send('Error registering user');
   }
 };
+
 export const logoutUser = (req, res) => {
   req.logout((err) => {
     if (err) {
@@ -179,7 +201,7 @@ export const otpGeneration = async (req, res) => {
 export const checkAuth = async (req, res, next) => {
   try {
     if (req.isAuthenticated()) {
-      console.log("inside here")
+
 
       return res.status(200).json({ authenticated: true, name: req.user.name, id: req.user.id, profilepic: req.user.profilepic });
     }

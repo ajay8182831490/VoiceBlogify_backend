@@ -18,30 +18,30 @@ const otpRateLimiter = rateLimit({
 // });
 
 router.post('/login', (req, res, next) => {
-  console.log("Login endpoint called");
+
 
   passport.authenticate('local', (err, user, info) => {
     if (err) {
-      console.log("Error during authentication", err);
+      console.log("Login endpoint called");
       return next(err);
     }
 
-    console.log(user, info)
+
 
     // Log the failure message
     if (!user) {
-      console.log("Authentication failed:", info);
+
       return res.status(401).json({ message: info.message || 'Authentication failed' });
     }
 
     req.logIn(user, (err) => {
       if (err) {
-        console.log("Error during req.logIn", err);
+
         return next(err);
       }
 
-      console.log("User successfully logged in");
-      return res.status(200).json({ message: 'Login successful', user });
+
+      return res.status(200).json({ message: 'Login successful', authenticated: true, name: user.name, id: user.id, profilepic: user.profilepic, blogCount: user.blogCount });
     });
   })(req, res, next);
 });
