@@ -12,7 +12,10 @@ const __filename = fileURLToPath(import.meta.url);
 const prisma = new PrismaClient();
 
 passport.use(new LocalStrategy(
-  { usernameField: 'email', passwordField: 'password' }, // tell Passport to use 'email'
+  {
+    usernameField: 'email', // Explicitly specify email field
+    passwordField: 'password'
+  },
   async (email, password, done) => {
     try {
       logInfo(`Looking for user with email: ${email}`, path.basename(__filename), 'LocalStrategy');
@@ -20,9 +23,14 @@ passport.use(new LocalStrategy(
       // Fetch the user from Prisma
       const user = await prisma.user.findUnique({ where: { email } });
 
+
       if (!user) {
         logInfo(`No user found with email: ${email}`, path.basename(__filename), 'LocalStrategy');
-        return done(null, false, { message: 'Incorrect email.' });
+        return done(null, false, { message: 'Incorrect email.' }); // Adjusted message for clarity
+      }
+      if (user.googleId) {
+        logInfo('User authenticated with Google attempting local login', path.basename(__filename), 'LocalStrategy');
+        return done(null, false, { message: 'User authenticated with Google. Please use Google login.' });
       }
 
       // Check if the password matches
@@ -58,6 +66,17 @@ passport.use(new GoogleStrategy({
 
 
     if (!user) {
+
+
+      const email = profile.emails && profile.emails[0] && profile.emails[0].value;
+
+      // Check if there is an existing user with the same email
+      const existingUserWithEmail = await prisma.user.findUnique({ where: { email: email } });
+
+      if (existingUserWithEmail) {
+        // If a user with the same email exists but has no googleId, they signed up using email/password
+        return done(null, false, { message: 'An account with this email already exists. Please log in using email and password.' });
+      }
       user = await prisma.user.create({
         data: {
           googleId: profile.id,

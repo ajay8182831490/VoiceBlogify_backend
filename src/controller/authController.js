@@ -71,7 +71,7 @@ export const registerUser = async (req, res) => {
 
   } catch (err) {
     logError(err, path.basename(__filename));
-    return res.status(500).send('Error registering user');
+    return res.status(500).json({ messae: 'Error registering user' });
   }
 };
 

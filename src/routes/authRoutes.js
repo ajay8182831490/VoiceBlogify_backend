@@ -4,6 +4,7 @@ import passport from '../config/passport.js';
 import rateLimit from 'express-rate-limit';
 import { ensureAuthenticated } from '../middleware/authMiddleware.js';
 import { registerUser, logoutUser, resetPassword, otpGeneration, checkAuth } from '../controller/authController.js';
+import { logInfo } from '../utils/logger.js';
 
 const router = express.Router();
 const otpRateLimiter = rateLimit({
@@ -21,8 +22,9 @@ router.post('/login', (req, res, next) => {
 
 
   passport.authenticate('local', (err, user, info) => {
+
     if (err) {
-      console.log("Login endpoint called");
+
       return next(err);
     }
 
@@ -51,9 +53,9 @@ router.post('/login', (req, res, next) => {
 router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 router.get('/auth/google/callback',
-  passport.authenticate('google', { failureRedirect: '/login' }),
+  passport.authenticate('google', { failureRedirect: 'http://localhost:5173/login' }),
   (req, res) => {
-    res.redirect('http://localhost:5173');
+    res.redirect('http://localhost:5173?login=success');
   });
 
 
