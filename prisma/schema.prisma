@@ -33,6 +33,7 @@ model User {
     payments         Payment[]
     features     Feature []
    blogCount  Int       @default(0)
+   isVerified Boolean @default(false)
 }
 model Token {
   id            Int        @id @default(autoincrement())
