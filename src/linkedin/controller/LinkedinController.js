@@ -1,15 +1,15 @@
-import { logError, logInfo } from "../../utils/logger.js";
+import { logError } from "../../utils/logger.js";
 import axios from "axios";
 import path from "path";
 import { fileURLToPath } from "url";
 
+const __filename = fileURLToPath(import.meta.url);
 import { PrismaClient } from "@prisma/client";
 import { linkedinMiddleware } from "../middleware/linkedinMiddleware.js";
 
 const prisma = new PrismaClient();
 
 
-const __filename = fileURLToPath(import.meta.url);
 export const connect_to_linkedin = async (req, res) => {
     logInfo(
         `Connecting user ${req.userId} with LinkedIn`,

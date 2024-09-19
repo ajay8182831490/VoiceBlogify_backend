@@ -13,14 +13,13 @@ const prisma = new PrismaClient();
 
 passport.use(new LocalStrategy(
   {
-    usernameField: 'email', // Explicitly specify email field
+    usernameField: 'email',
     passwordField: 'password'
   },
   async (email, password, done) => {
     try {
       logInfo(`Looking for user with email: ${email}`, path.basename(__filename), 'LocalStrategy');
 
-      // Fetch the user from Prisma
       const user = await prisma.user.findUnique({ where: { email } });
 
 
@@ -82,7 +81,8 @@ passport.use(new GoogleStrategy({
           googleId: profile.id,
           name: profile.displayName,
           email: profile.emails && profile.emails[0] && profile.emails[0].value,
-          profilepic: profile.photos && profile.photos[0] && profile.photos[0].value
+          profilepic: profile.photos && profile.photos[0] && profile.photos[0].value,
+          isVerified: true
         }
       });
     }

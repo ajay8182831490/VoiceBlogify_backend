@@ -7,8 +7,10 @@ import cors from 'cors'
 import linkdeinRoutes from './src/linkedin/routes/LinkedinRoutes.js'
 import redditRoutes from './src/Reddit/routes/RedditRoutes.js'
 
+import transcriptioRoutes from './src/main_feature/transcription/routes/transcriptionRoutes.js'
 
 
+import path from 'path';
 
 
 dotenv.config();
@@ -39,6 +41,9 @@ app.use(passport.session());
 app.use(authRoutes);
 app.use(linkdeinRoutes)
 app.use(redditRoutes)
+app.use(transcriptioRoutes)
+
+
 
 app.listen(port, () => {
   console.log("Server is running on port", port);
