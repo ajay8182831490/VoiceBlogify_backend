@@ -14,7 +14,7 @@ datasource db {
 }
 
 model User {
-  id             Int        @id @default(autoincrement())
+  id          String   @id @default(uuid())
   email          String     @unique
   password       String?    // Nullable, for email/password authentication
   googleId       String?   @unique  // Nullable, for Google OAuth authentication
@@ -34,10 +34,11 @@ model User {
     features     Feature []
    blogCount  Int       @default(0)
    isVerified Boolean @default(false)
+   post Post[]
 }
 model Token {
   id            Int        @id @default(autoincrement())
-  userId        Int      
+  userId        String      
   user          User       @relation(fields: [userId], references: [id])
   platform      Platform   
   platformUserId String?    // Unique ID for the user's account on the platform
@@ -57,7 +58,7 @@ model Token {
 }
 model Payment {
   id              Int            @id @default(autoincrement())
-  userId          Int            // Foreign key reference
+  userId          String           // Foreign key reference
   user            User           @relation(fields: [userId], references: [id])
   subscriptionId  Int            // Foreign key reference
   subscription    Subscription  @relation(fields: [subscriptionId], references: [id])
@@ -72,12 +73,12 @@ model Feature {
   plan        Plan  
   
     // Enum to define which plan has this feature
-     userId Int
+     userId String
       user            User           @relation(fields: [userId], references: [id])
 }
 model Subscription {
   id                    Int        @id @default(autoincrement())
-  userId                Int        // Foreign key reference
+  userId                String       // Foreign key reference
   user                  User       @relation(fields: [userId], references: [id])
   stripeSubscriptionId  String     // Stripe subscription ID
   plan                  Plan       // Enum to define the subscription plan type
@@ -90,19 +91,34 @@ model Subscription {
   payments              Payment[]
 }
 
+model Post {
+  id             Int       @id @default(autoincrement()) 
+  userId         String                                 
+  user           User      @relation(fields: [userId], references: [id]) 
+  title          String?                               
+  subtitle       String?                              
+  tags           String[]                               
+  content        String                                  
+  dateOfCreation DateTime? @default(now())    
+}           
+
 
 
 enum Platform {
   LINKEDIN
   MEDIUM
   REDDIT
+BLOGGER
+
   // Add other platforms as needed
 }
 
 enum Plan {
   FREE
+  BASIC
   
   PREMIUM
+  BUISNESS
 }
 
 enum BillingCycle {
@@ -113,7 +129,7 @@ enum BillingCycle {
 enum PaymentMethod {
   CREDIT_CARD
   PAYPAL
-  STRIPE
+ 
 }
 
 enum UserRole {

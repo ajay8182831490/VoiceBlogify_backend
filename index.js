@@ -8,6 +8,7 @@ import linkdeinRoutes from './src/linkedin/routes/LinkedinRoutes.js'
 import redditRoutes from './src/Reddit/routes/RedditRoutes.js'
 
 import transcriptioRoutes from './src/main_feature/transcription/routes/transcriptionRoutes.js'
+import postOperation from './src/postOperation/postRoutes.js'
 
 
 import path from 'path';
@@ -42,6 +43,7 @@ app.use(authRoutes);
 app.use(linkdeinRoutes)
 app.use(redditRoutes)
 app.use(transcriptioRoutes)
+app.use(postOperation)
 
 
 
