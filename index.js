@@ -64,7 +64,7 @@ app.use(session({
     maxAge: 1000 * 60 * 60 * 24, // 1 day
     secure: process.env.NODE_ENV === 'production', 
     httpOnly: true,
-    sameSite:  'None', domain: '.voiceblogify.netlify.app'
+    sameSite:  'None'
   },
 }));
 
