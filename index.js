@@ -22,10 +22,24 @@ const app = express();
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(cors({
-  origin: ['https://voiceblogify.netlify.app/', 'http://localhost:5173'],
+const allowedOrigins = [
+  'https://voiceblogify.netlify.app',
+  'http://localhost:5173'
+];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   credentials: true,
-}));
+};
+
+app.use(cors(corsOptions));
 app.get('/keep-alive', (req, res) => {
   res.send('Alive!');
 });
