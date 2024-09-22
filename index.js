@@ -59,6 +59,10 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 const prisma = new PrismaClient();
+await prisma.$connect();
+
+
+
 
 const sessionStore = new PrismaSessionStore(prisma, {
   checkPeriod: 2 * 60 * 1000,
