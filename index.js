@@ -20,7 +20,7 @@ app.use(express.json());
 
 const allowedOrigins = [
   'https://voiceblogify.netlify.app',
-  'http://localhost:5173'
+  'http://localhost:5173',
 ];
 
 const corsOptions = {
@@ -41,6 +41,7 @@ app.get('/keep-alive', (req, res) => {
   res.send('Alive!');
 });
 
+// Cron job to keep the server alive
 const job = new CronJob('*/5 * * * *', async () => {
   try {
     const response = await fetch('https://voiceblogify-backend.onrender.com/keep-alive', {
@@ -54,13 +55,14 @@ const job = new CronJob('*/5 * * * *', async () => {
 
 job.start();
 
+// Session configuration
 app.use(session({
   secret: process.env.SECRET_SESSION_KEY,
   resave: false,
   saveUninitialized: false,
   cookie: {
-    maxAge: 1000 * 60 * 60 * 24,
-    secure: process.env.NODE_ENV === 'production',
+    maxAge: 1000 * 60 * 60 * 24, // 1 day
+    secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
     httpOnly: true,
     sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
   },
@@ -69,13 +71,14 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
+// Route middleware
 app.use(authRoutes);
 app.use(linkedinRoutes);
 app.use(redditRoutes);
 app.use(transcriptionRoutes);
 app.use(postOperation);
 
-
+// Global error handling
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(err.status || 500).json({
@@ -83,7 +86,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-
+// Start the server
 app.listen(port, () => {
   console.log("Server is running on port", port);
 });
