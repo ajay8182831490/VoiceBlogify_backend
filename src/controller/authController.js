@@ -5,6 +5,7 @@ import { logError, logInfo } from '../utils/logger.js';
 import { sendEmailforOtp } from '../utils/util.js';
 import { fileURLToPath } from 'url';
 import path from 'path'
+import bcrypt from 'bcrypt';
 
 const __filename = fileURLToPath(import.meta.url);
 const prisma = new PrismaClient();
@@ -154,7 +155,50 @@ export const resetPassword = async (req, res) => {
 
   }
 }
+export const passwordChange = async (req, res) => {
+  logInfo(`Going to change the password of user ${req.userId}`, path.basename(__filename), passwordChange);
 
+  try {
+    const { oldPassword, newPassword } = req.body;
+
+    const user = await prisma.user.findFirst({
+      where: {
+        id: req.userId
+      },
+      select: {
+        password: true
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Compare the provided old password with the stored password
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid password' });
+    }
+
+    const newHashPassword = await hashPassword(newPassword);
+
+    await prisma.user.update({
+      where: {
+        id: req.userId
+      },
+      data: {
+        password: newHashPassword
+      }
+    });
+
+    res.status(200).json({ message: "Password changed successfully" });
+
+  } catch (ex) {
+    logError(ex, path.basename(__filename));
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
 
 export const otpGeneration = async (req, res) => {
   const { email } = req.body;
