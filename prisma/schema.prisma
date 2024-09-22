@@ -100,7 +100,13 @@ model Post {
   tags           String[]                               
   content        String                                  
   dateOfCreation DateTime? @default(now())    
-}           
+}    
+model Session {
+  id        String   @id
+  sid       String   @unique
+  data      String
+  expiresAt   DateTime
+}  
 
 
 

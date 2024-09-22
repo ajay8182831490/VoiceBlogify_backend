@@ -12,6 +12,9 @@ import transcriptionRoutes from './src/main_feature/transcription/routes/transcr
 import postOperation from './src/postOperation/postRoutes.js';
 import rateLimit from 'express-rate-limit';
 
+import { PrismaClient } from '@prisma/client';
+import { PrismaSessionStore } from '@quixo3/prisma-session-store';
+
 dotenv.config();
 
 const port = process.env.port || 3000;
@@ -19,13 +22,13 @@ const app = express();
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(helmet()); 
+app.use(helmet());
 
 
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100, 
+  max: 100,
 });
 
 
@@ -39,7 +42,7 @@ const job = new CronJob('*/5 * * * *', async () => {
     const response = await fetch('https://voiceblogify-backend.onrender.com/keep-alive', {
       timeout: 10000,
     });
-  
+
   } catch (error) {
     console.error('Error keeping alive:', error);
   }
@@ -48,23 +51,30 @@ const job = new CronJob('*/5 * * * *', async () => {
 job.start();
 
 const corsOptions = {
-  origin: ['https://voiceblogify.netlify.app'], 
+  origin: ['https://voiceblogify.netlify.app'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization'], 
+  allowedHeaders: ['Content-Type', 'Authorization'],
 };
 
 app.use(cors(corsOptions));
+const prisma = new PrismaClient();
+
+const sessionStore = new PrismaSessionStore(prisma, {
+  checkPeriod: 2 * 60 * 1000,
+  ttl: 24 * 60 * 60,
+});
 
 app.use(session({
+  store: sessionStore,
   secret: process.env.SECRET_SESSION_KEY,
   resave: false,
   saveUninitialized: false,
   cookie: {
     maxAge: 1000 * 60 * 60 * 24, // 1 day
-    secure: process.env.NODE_ENV === 'production', 
+    secure: process.env.NODE_ENV === 'production', // Use true in production
     httpOnly: true,
-    sameSite:  'None'
+    sameSite: 'None',
   },
 }));
 

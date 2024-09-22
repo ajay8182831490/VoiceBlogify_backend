@@ -76,18 +76,25 @@ export const registerUser = async (req, res) => {
   }
 };
 
-export const logoutUser = (req, res) => {
-  req.logout((err) => {
+export const logoutUser = async (req, res) => {
+  req.logout(async (err) => {
     if (err) {
       return res.status(500).send('Error logging out');
     }
-    req.session.destroy((err) => {
-      if (err) {
-        return res.status(500).send('Error destroying session');
-      }
-      res.clearCookie('connect.sid'); // This clears the session cookie
+
+    try {
+
+      await req.session.destroy();
+
+      await prisma.session.delete({
+        where: { sid: req.session.id },
+      });
+
+      res.clearCookie('connect.sid');
       res.send('User logged out successfully');
-    });
+    } catch (error) {
+      return res.status(500).send('Error destroying session');
+    }
   });
 };
 
@@ -254,7 +261,7 @@ export const checkAuth = async (req, res, next) => {
       profilepic: req.user.profilepic,
     });
   }
-  
+
   return res.status(401).json({ authenticated: false });
 };
 
