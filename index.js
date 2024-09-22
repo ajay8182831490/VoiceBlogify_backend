@@ -11,38 +11,40 @@ import redditRoutes from './src/Reddit/routes/RedditRoutes.js';
 import transcriptionRoutes from './src/main_feature/transcription/routes/transcriptionRoutes.js';
 import postOperation from './src/postOperation/postRoutes.js';
 import rateLimit from 'express-rate-limit';
-
-import { PrismaClient } from '@prisma/client';
-import { PrismaSessionStore } from '@quixo3/prisma-session-store';
+import MongoStore from 'connect-mongo';
+import { MongoClient } from 'mongodb';
 
 dotenv.config();
 
-const port = process.env.port || 3000;
+const port = process.env.PORT || 3000; // Ensure to use uppercase PORT
 const app = express();
+
+
+const mongoUrl = process.env.MONGODB_URI; // Your MongoDB connection string
+const client = new MongoClient(mongoUrl);
+
+async function connectToDatabase() {
+  await client.connect();
+  console.log('Connected to MongoDB');
+}
+
+connectToDatabase();
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(helmet());
-
-
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
 });
 
-
 app.get('/keep-alive', (req, res) => {
   res.send('Alive!');
 });
 
-
 const job = new CronJob('*/5 * * * *', async () => {
   try {
-    const response = await fetch('https://voiceblogify-backend.onrender.com/keep-alive', {
-      timeout: 10000,
-    });
-
+    await fetch('https://voiceblogify-backend.onrender.com/keep-alive', { timeout: 10000 });
   } catch (error) {
     console.error('Error keeping alive:', error);
   }
@@ -58,52 +60,24 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-const prisma = new PrismaClient();
-await prisma.$connect();
-
-
-
-/*
-const sessionStore = new PrismaSessionStore(prisma, {
-  checkPeriod: 2 * 60 * 1000,
-  ttl: 24 * 60 * 60,
-});
 
 app.use(session({
-  store: sessionStore,
   secret: process.env.SECRET_SESSION_KEY,
+  store: MongoStore.create({
+    client: client,
+    dbName: 'voiceBlogify', // Replace with your database name
+  }),
   resave: false,
   saveUninitialized: false,
   cookie: {
     maxAge: 1000 * 60 * 60 * 24, // 1 day
-    secure: process.env.NODE_ENV === 'production', // Use true in production
-    httpOnly: true,
-    sameSite: 'None',
+    sameSite: 'Lax',
+    secure: process.env.NODE_ENV === 'production',
   },
-}));*/
-
-app.use(
-  expressSession({
-    cookie: {
-      maxAge: 7 * 24 * 60 * 60 * 1000 // ms
-    },
-    secret: process.env.SECRET_SESSION_KEY,
-    resave: true,
-    saveUninitialized: true,
-    store: new PrismaSessionStore(
-      new PrismaClient(),
-      {
-        checkPeriod: 2 * 60 * 1000,  //ms
-        dbRecordIdIsSessionId: true,
-        dbRecordIdFunction: undefined,
-      }
-    )
-  })
-);
+}));
 
 app.use(passport.initialize());
 app.use(passport.session());
-
 
 app.use(authRoutes);
 app.use(linkdeinRoutes);
