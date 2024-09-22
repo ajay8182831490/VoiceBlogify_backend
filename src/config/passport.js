@@ -25,7 +25,7 @@ passport.use(new LocalStrategy(
 
       if (!user) {
         logInfo(`No user found with email: ${email}`, path.basename(__filename), 'LocalStrategy');
-        return done(null, false, { message: 'Incorrect email.' }); // Adjusted message for clarity
+        return done(null, false, { message: 'Incorrect email.' });
       }
       if (user.googleId) {
         logInfo('User authenticated with Google attempting local login', path.basename(__filename), 'LocalStrategy');
@@ -69,11 +69,11 @@ passport.use(new GoogleStrategy({
 
       const email = profile.emails && profile.emails[0] && profile.emails[0].value;
 
-      // Check if there is an existing user with the same email
+
       const existingUserWithEmail = await prisma.user.findUnique({ where: { email: email } });
 
       if (existingUserWithEmail) {
-        // If a user with the same email exists but has no googleId, they signed up using email/password
+
         return done(null, false, { message: 'An account with this email already exists. Please log in using email and password.' });
       }
       user = await prisma.user.create({

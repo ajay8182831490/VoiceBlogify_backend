@@ -53,6 +53,7 @@ router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 
 router.get('/auth/google/callback',
   passport.authenticate('google', { failureRedirect: 'https://voiceblogify.netlify.app/login' }),
   (req, res) => {
+    req.session.userId = req.user.id;
     res.redirect('https://voiceblogify.netlify.app/?login=success');
   });
 
