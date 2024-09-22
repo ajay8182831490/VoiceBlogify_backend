@@ -14,6 +14,7 @@ import rateLimit from 'express-rate-limit';
 
 import { PrismaClient } from '@prisma/client';
 import { PrismaSessionStore } from '@quixo3/prisma-session-store';
+import expressSession from 'express-session';
 
 dotenv.config();
 
