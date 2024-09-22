@@ -20,7 +20,7 @@ app.use(express.json());
 
 const allowedOrigins = [
   'https://voiceblogify.netlify.app',
-  'http://localhost:5173',
+  'http://localhost:5173'
 ];
 
 const corsOptions = {
@@ -32,10 +32,11 @@ const corsOptions = {
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  credentials: true,
+  credentials: true, 
 };
 
 app.use(cors(corsOptions));
+
 
 app.get('/keep-alive', (req, res) => {
   res.send('Alive!');
@@ -61,10 +62,10 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    maxAge: 1000 * 60 * 60 * 24, // 1 day
-    secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
-    httpOnly: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+    maxAge: 1000 * 60 * 60 * 24,
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true, 
+    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax', 
   },
 }));
 
