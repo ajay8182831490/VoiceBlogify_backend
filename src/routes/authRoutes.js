@@ -62,7 +62,7 @@ router.post('/register', registerUser);
 router.get('/logout', ensureAuthenticated, logoutUser);
 router.post('/otpGenrator', otpRateLimiter, otpGeneration)
 router.put('/resetPassword', otpRateLimiter, resetPassword)
-router.get('/status', checkAuth);
+router.get('/status', ensureAuthenticated,checkAuth);
 router.patch('/passwordChange', ensureAuthenticated, otpRateLimiter, passwordChange)
 router.get('/test-auth', checkAuth, (req, res) => {
   res.send('You are authenticated!');
