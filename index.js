@@ -2,37 +2,31 @@ import express from 'express';
 import session from 'express-session';
 import passport from './src/config/passport.js';
 import authRoutes from './src/routes/authRoutes.js';
-import { CronJob } from 'cron';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import linkedinRoutes from './src/linkedin/routes/LinkedinRoutes.js';
+import helmet from 'helmet';
+import { CronJob } from 'cron';
+import linkdeinRoutes from './src/linkedin/routes/LinkedinRoutes.js';
 import redditRoutes from './src/Reddit/routes/RedditRoutes.js';
 import transcriptionRoutes from './src/main_feature/transcription/routes/transcriptionRoutes.js';
 import postOperation from './src/postOperation/postRoutes.js';
+import rateLimit from 'express-rate-limit';
 
 dotenv.config();
 
-const port = process.env.PORT || 3000;
+const port = process.env.port || 3000;
 const app = express();
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(helmet()); // Security headers
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    const allowedOrigins = ['https://voiceblogify.netlify.app', 'http://localhost:5173'];
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.error(`Blocked by CORS: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  credentials: true,  // Allow cookies to be sent with cross-origin requests
-};
-
-app.use(cors(corsOptions));
+// Rate limiter for all requests
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+});
+app.use(limiter);
 
 app.get('/keep-alive', (req, res) => {
   res.send('Alive!');
@@ -52,50 +46,42 @@ const job = new CronJob('*/5 * * * *', async () => {
 
 job.start();
 
-// Logging the session secret for debugging
-console.log("Session secret:", process.env.SECRET_SESSION_KEY);
+const corsOptions = {
+  origin: ['https://voiceblogify.netlify.app'], // Only allow production origin
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  credentials: true,
+};
 
-// Try-catch to handle session errors
-try {
-  app.use(session({
-    secret: process.env.SECRET_SESSION_KEY,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      maxAge: 1000 * 60 * 60 * 24, // 1 day
-      secure: process.env.NODE_ENV === 'production',  // Only set to secure in production (HTTPS)
-      httpOnly: true,  // Prevent client-side JS from accessing the cookie
-      sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',  // Cross-site cookie handling
-    }
-  }));
-  console.log("Session middleware initialized.");
-} catch (error) {
-  console.error("Session initialization error:", error);
-}
+app.use(cors(corsOptions));
 
-// Log session before Passport initialization
+app.use(session({
+  secret: process.env.SECRET_SESSION_KEY,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    maxAge: 1000 * 60 * 60 * 24, // 1 day
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: 'None',
+  }
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
 app.use((req, res, next) => {
-  console.log('Session before passport:', req.session);
+  console.log('Session data:', req.session);
   next();
 });
 
-// Initialize Passport after session middleware
-app.use(passport.initialize());
-app.use(passport.session());
-
-// Route middleware
 app.use(authRoutes);
-app.use(linkedinRoutes);
+app.use(linkdeinRoutes);
 app.use(redditRoutes);
 app.use(transcriptionRoutes);
 app.use(postOperation);
 
-// Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(err.status || 500).json({
-    message: err.message || 'Internal Server Error',
-  });
+  console.error('Error:', err);
+  res.status(err.status || 500).json({ message: err.message || 'Internal Server Error' });
 });
 
 app.listen(port, () => {
