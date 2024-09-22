@@ -63,7 +63,7 @@ await prisma.$connect();
 
 
 
-
+/*
 const sessionStore = new PrismaSessionStore(prisma, {
   checkPeriod: 2 * 60 * 1000,
   ttl: 24 * 60 * 60,
@@ -80,7 +80,26 @@ app.use(session({
     httpOnly: true,
     sameSite: 'None',
   },
-}));
+}));*/
+
+app.use(
+  expressSession({
+    cookie: {
+      maxAge: 7 * 24 * 60 * 60 * 1000 // ms
+    },
+    secret: process.env.SECRET_SESSION_KEY,
+    resave: true,
+    saveUninitialized: true,
+    store: new PrismaSessionStore(
+      new PrismaClient(),
+      {
+        checkPeriod: 2 * 60 * 1000,  //ms
+        dbRecordIdIsSessionId: true,
+        dbRecordIdFunction: undefined,
+      }
+    )
+  })
+);
 
 app.use(passport.initialize());
 app.use(passport.session());
