@@ -47,9 +47,9 @@ const job = new CronJob('*/5 * * * *', async () => {
 job.start();
 
 const corsOptions = {
-  origin: ['https://voiceblogify.netlify.app'], // Only allow production origin
+  origin: ['https://voiceblogify.netlify.app'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  credentials: true,
+  credentials: true, // Allow sending credentials (cookies)
 };
 
 app.use(cors(corsOptions));
@@ -60,10 +60,10 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     maxAge: 1000 * 60 * 60 * 24, // 1 day
-    secure: true,
+    secure: true, // Require HTTPS for cookie transmission
     httpOnly: true,
     sameSite: 'None',
-  }
+  },
 }));
 
 app.use(passport.initialize());
