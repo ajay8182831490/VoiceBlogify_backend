@@ -18,10 +18,9 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-const allowedOrigins = ['https://voiceblogify.netlify.app', 'http://localhost:5173'];
-
 const corsOptions = {
   origin: function (origin, callback) {
+    const allowedOrigins = ['https://voiceblogify.netlify.app', 'http://localhost:5173'];
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -30,7 +29,7 @@ const corsOptions = {
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  credentials: true, // Allow cookies to be sent with cross-origin requests
+  credentials: true,  // Allow cookies to be sent with cross-origin requests
 };
 
 app.use(cors(corsOptions));
@@ -53,28 +52,34 @@ const job = new CronJob('*/5 * * * *', async () => {
 
 job.start();
 
-// Session configuration
-console.log('Session key:', process.env.SECRET_SESSION_KEY,process.env.NODE_ENV);
-app.use(session({
-  secret: process.env.SECRET_SESSION_KEY,
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    maxAge: 1000 * 60 * 60 * 24, // 1 day
-    secure: process.env.NODE_ENV === 'production', // Only set to secure in production (HTTPS)
-    httpOnly: true, // Prevent client-side JS from accessing the cookie
-    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax', // Cross-site cookie handling
-  },
-}));
+// Logging the session secret for debugging
+console.log("Session secret:", process.env.SECRET_SESSION_KEY);
 
-// Logging session details in development mode
-if (process.env.NODE_ENV === 'development') {
-  app.use((req, res, next) => {
-    console.log('Session created:', req.session);
-    next();
-  });
+// Try-catch to handle session errors
+try {
+  app.use(session({
+    secret: process.env.SECRET_SESSION_KEY,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      maxAge: 1000 * 60 * 60 * 24, // 1 day
+      secure: process.env.NODE_ENV === 'production',  // Only set to secure in production (HTTPS)
+      httpOnly: true,  // Prevent client-side JS from accessing the cookie
+      sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',  // Cross-site cookie handling
+    }
+  }));
+  console.log("Session middleware initialized.");
+} catch (error) {
+  console.error("Session initialization error:", error);
 }
 
+// Log session before Passport initialization
+app.use((req, res, next) => {
+  console.log('Session before passport:', req.session);
+  next();
+});
+
+// Initialize Passport after session middleware
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -93,7 +98,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start the server
 app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+  console.log("Server is running on port", port);
 });
