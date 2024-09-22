@@ -55,7 +55,7 @@ const job = new CronJob('*/5 * * * *', async () => {
 });
 
 job.start();
-console.log(process.env.SECRET_SESSION_KEY);
+
 
 // Session configuration
 app.use(session({
@@ -65,10 +65,14 @@ app.use(session({
   cookie: {
     maxAge: 1000 * 60 * 60 * 24,
     secure: process.env.NODE_ENV === 'production',
-    httpOnly: true, 
-    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax', 
+    httpOnly: true,
+    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
   },
+}, (req, res, next) => {
+  console.log('Session created:', req.session);
+  next();
 }));
+
 
 app.use(passport.initialize());
 app.use(passport.session());
