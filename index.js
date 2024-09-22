@@ -16,16 +16,44 @@ import { MongoClient } from 'mongodb';
 
 dotenv.config();
 
-const port = process.env.PORT || 3000; // Ensure to use uppercase PORT
+const port = process.env.PORT || 3000;
 const app = express();
 
-
-const mongoUrl = process.env.MONGODB_URI; // Your MongoDB connection string
+const mongoUrl = process.env.MONGODB_URI;
 const client = new MongoClient(mongoUrl);
 
 async function connectToDatabase() {
-  await client.connect();
-  console.log('Connected to MongoDB');
+  try {
+    await client.connect();
+    console.log('Connected to MongoDB');
+    
+    // Now, setup the session store after MongoDB is connected
+    app.use(session({
+      secret: process.env.SECRET_SESSION_KEY,
+      store: MongoStore.create({
+        client: client,  // Pass the connected client
+        dbName: 'voiceBlogify',
+      }),
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        maxAge: 1000 * 60 * 60 * 24, // 1 day
+        sameSite: 'Lax',
+        secure: process.env.NODE_ENV === 'production',
+      },
+    }));
+
+    // Initialize Passport session after session middleware
+    app.use(passport.initialize());
+    app.use(passport.session());
+
+    // Start listening after database connection is successful
+    app.listen(port, () => {
+      console.log("Server is running on port", port);
+    });
+  } catch (error) {
+    console.error('Failed to connect to MongoDB:', error);
+  }
 }
 
 connectToDatabase();
@@ -61,35 +89,22 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-app.use(session({
-  secret: process.env.SECRET_SESSION_KEY,
-  store: MongoStore.create({
-    client: client,
-    dbName: 'voiceBlogify', // Replace with your database name
-  }),
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    maxAge: 1000 * 60 * 60 * 24, // 1 day
-    sameSite: 'Lax',
-    secure: process.env.NODE_ENV === 'production',
-  },
-}));
+// Debugging to check session and user
+app.use((req, res, next) => {
+  console.log('Session:', req.session);
+  console.log('User:', req.user);
+  next();
+});
 
-app.use(passport.initialize());
-app.use(passport.session());
-
+// Routes
 app.use(authRoutes);
 app.use(linkdeinRoutes);
 app.use(redditRoutes);
 app.use(transcriptionRoutes);
 app.use(postOperation);
 
+// Error handling
 app.use((err, req, res, next) => {
   console.error('Error:', err);
   res.status(err.status || 500).json({ message: err.message || 'Internal Server Error' });
-});
-
-app.listen(port, () => {
-  console.log("Server is running on port", port);
 });
