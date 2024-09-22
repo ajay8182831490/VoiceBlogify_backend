@@ -55,6 +55,7 @@ const job = new CronJob('*/5 * * * *', async () => {
 });
 
 job.start();
+console.log(process.env.SECRET_SESSION_KEY);
 
 // Session configuration
 app.use(session({
