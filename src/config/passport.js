@@ -53,7 +53,7 @@ passport.use(new LocalStrategy(
 passport.use(new GoogleStrategy({
   clientID: process.env.clientid,
   clientSecret: process.env.clientsecret,
-  callbackURL: 'http://localhost:4000/auth/google/callback',
+  callbackURL: 'https://voiceblogify-backend.onrender.com/auth/google/callback',
   scope: ['openid', 'profile', 'email'],
 
 }, async (token, tokenSecret, profile, done) => {

@@ -2,6 +2,7 @@ import express from 'express';
 import session from 'express-session';
 import passport from './src/config/passport.js';
 import authRoutes from './src/routes/authRoutes.js';
+import { CronJob } from 'cron'
 import dotenv from 'dotenv';
 import cors from 'cors'
 import linkdeinRoutes from './src/linkedin/routes/LinkedinRoutes.js'
@@ -11,7 +12,7 @@ import transcriptioRoutes from './src/main_feature/transcription/routes/transcri
 import postOperation from './src/postOperation/postRoutes.js'
 
 
-import path from 'path';
+
 
 
 dotenv.config();
@@ -22,9 +23,28 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cors({
-  origin: 'http://localhost:5173', // Replace with your frontend URL
-  credentials: true, // Allow credentials (cookies) to be sent
+  origin: ['https://voiceblogify.netlify.app/', 'http://localhost:5173'],
+  credentials: true,
 }));
+app.get('/keep-alive', (req, res) => {
+  res.send('Alive!');
+});
+
+
+const job = new CronJob('*/5 * * * *', async () => {
+  try {
+    const response = await fetch('https://voiceblogify-backend.onrender.com/keep-alive', {
+      timeout: 10000,
+    });
+    console.log('Kept alive');
+  } catch (error) {
+    console.error('Error keeping alive:', error);
+  }
+});
+
+job.start();
+
+
 
 app.use(session({
   secret: process.env.SECRET_SESSION_KEY,

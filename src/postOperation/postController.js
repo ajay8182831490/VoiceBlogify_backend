@@ -2,7 +2,10 @@ import { logInfo, logError } from "../utils/logger.js"
 
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
+import path from "path";
+import { fileURLToPath } from "url";
 
+const __filename = fileURLToPath(import.meta.url);
 
 
 

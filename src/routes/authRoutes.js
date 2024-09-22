@@ -3,7 +3,7 @@ import passport from '../config/passport.js';
 
 import rateLimit from 'express-rate-limit';
 import { ensureAuthenticated } from '../middleware/authMiddleware.js';
-import { registerUser, logoutUser, resetPassword, otpGeneration, checkAuth } from '../controller/authController.js';
+import { registerUser, logoutUser, resetPassword, otpGeneration, checkAuth, passwordChange } from '../controller/authController.js';
 import { logInfo } from '../utils/logger.js';
 
 const router = express.Router();
@@ -14,9 +14,7 @@ const otpRateLimiter = rateLimit({
 });
 
 
-// router.get('/login', (req, res) => {
-//   res.send('<form action="/login" method="post"><input type="text" name="name" /><input type="email" name="email" /><input type="password" name="password" /><button type="submit">Login</button></form>');
-// });
+
 
 router.post('/login', (req, res, next) => {
 
@@ -53,9 +51,9 @@ router.post('/login', (req, res, next) => {
 router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 router.get('/auth/google/callback',
-  passport.authenticate('google', { failureRedirect: 'http://localhost:5173/login' }),
+  passport.authenticate('google', { failureRedirect: 'https://voiceblogify.netlify.app/login' }),
   (req, res) => {
-    res.redirect('http://localhost:5173?login=success');
+    res.redirect('https://voiceblogify.netlify.app/?login=success');
   });
 
 
@@ -64,5 +62,6 @@ router.get('/logout', ensureAuthenticated, logoutUser);
 router.post('/otpGenrator', otpRateLimiter, otpGeneration)
 router.put('/resetPassword', otpRateLimiter, resetPassword)
 router.get('/status', checkAuth);
+router.patch('/passwordChange', ensureAuthenticated, otpRateLimiter, passwordChange)
 
 export default router;
