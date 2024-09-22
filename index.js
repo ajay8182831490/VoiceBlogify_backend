@@ -20,20 +20,20 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(helmet()); 
-app.set('trust proxy', 1);// Security headers
 
-// Rate limiter for all requests
+
+
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100, 
 });
-//app.use(limiter);
+
 
 app.get('/keep-alive', (req, res) => {
   res.send('Alive!');
 });
 
-// Cron job to keep the server alive
+
 const job = new CronJob('*/5 * * * *', async () => {
   try {
     const response = await fetch('https://voiceblogify-backend.onrender.com/keep-alive', {
