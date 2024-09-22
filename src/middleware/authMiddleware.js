@@ -8,7 +8,7 @@ export const ensureAuthenticated = (req, res, next) => {
 
     return next();
   }
-
+  alert("not");
 
   res.redirect('/login');
 };
