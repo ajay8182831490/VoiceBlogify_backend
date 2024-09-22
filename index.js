@@ -83,25 +83,27 @@ app.use(session({
   },
 }));*/
 
+let sessionStore;
+try {
+  sessionStore = new PrismaSessionStore(prisma, {
+    checkPeriod: 2 * 60 * 1000, // 2 minutes
+    dbRecordIdIsSessionId: true,
+  });
+} catch (error) {
+  console.error("Error initializing session store:", error);
+}
+
 app.use(
   expressSession({
     cookie: {
-      maxAge: 7 * 24 * 60 * 60 * 1000 // ms
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     },
-    secret: process.env.SECRET_SESSION_KEY,
+    secret: 'a santa at nasa',
     resave: true,
     saveUninitialized: true,
-    store: new PrismaSessionStore(
-      new PrismaClient(),
-      {
-        checkPeriod: 2 * 60 * 1000,  //ms
-        dbRecordIdIsSessionId: true,
-        dbRecordIdFunction: undefined,
-      }
-    )
+    store: sessionStore,
   })
 );
-
 app.use(passport.initialize());
 app.use(passport.session());
 
