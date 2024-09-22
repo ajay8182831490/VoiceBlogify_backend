@@ -19,7 +19,8 @@ const app = express();
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(helmet()); // Security headers
+app.use(helmet()); 
+app.set('trust proxy', 1);// Security headers
 
 // Rate limiter for all requests
 const limiter = rateLimit({
@@ -63,7 +64,7 @@ app.use(session({
     maxAge: 1000 * 60 * 60 * 24, // 1 day
     secure: process.env.NODE_ENV === 'production', 
     httpOnly: true,
-    sameSite:  'None'
+    sameSite:  'None', domain: '.voiceblogify.netlify.app'
   },
 }));
 
