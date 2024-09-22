@@ -26,7 +26,7 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limit each IP to 100 requests per windowMs
 });
-app.use(limiter);
+//app.use(limiter);
 
 app.get('/keep-alive', (req, res) => {
   res.send('Alive!');
@@ -38,7 +38,7 @@ const job = new CronJob('*/5 * * * *', async () => {
     const response = await fetch('https://voiceblogify-backend.onrender.com/keep-alive', {
       timeout: 10000,
     });
-    console.log('Kept alive, status:', response.status);
+  
   } catch (error) {
     console.error('Error keeping alive:', error);
   }
@@ -68,10 +68,7 @@ app.use(session({
 
 app.use(passport.initialize());
 app.use(passport.session());
-app.use((req, res, next) => {
-  console.log('Session data:', req.session);
-  next();
-});
+
 
 app.use(authRoutes);
 app.use(linkdeinRoutes);
