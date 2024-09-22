@@ -243,22 +243,18 @@ export const otpGeneration = async (req, res) => {
 
 }
 export const checkAuth = async (req, res, next) => {
-  try {
-    console.log('Authentication check for user:', req.user);
+  console.log('Authentication check:', req.user); // Log the user object
+  console.log('Cookies:', req.cookies); // Log the cookies
 
-    if (req.isAuthenticated()) {
-      return res.status(200).json({
-        authenticated: true,
-        name: req.user.name,
-        id: req.user.id,
-        profilepic: req.user.profilepic,
-      });
-    }
-
-    console.warn('User not authenticated');
-    return res.status(401).json({ authenticated: false });
-  } catch (ex) {
-    console.error('Error in checkAuth:', ex);
-    res.status(500).json({ message: 'Internal server error' });
+  if (req.isAuthenticated()) {
+    return res.status(200).json({
+      authenticated: true,
+      name: req.user.name,
+      id: req.user.id,
+      profilepic: req.user.profilepic,
+    });
   }
+  
+  return res.status(401).json({ authenticated: false });
 };
+
