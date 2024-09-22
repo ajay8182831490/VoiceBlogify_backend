@@ -47,9 +47,10 @@ const job = new CronJob('*/5 * * * *', async () => {
 job.start();
 
 const corsOptions = {
-  origin: ['https://voiceblogify.netlify.app'],
+  origin: ['https://voiceblogify.netlify.app'], 
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  credentials: true, // Allow sending credentials (cookies)
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization'], 
 };
 
 app.use(cors(corsOptions));
@@ -60,9 +61,9 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     maxAge: 1000 * 60 * 60 * 24, // 1 day
-    secure: true, // Require HTTPS for cookie transmission
+    secure: process.env.NODE_ENV === 'production', 
     httpOnly: true,
-    sameSite: 'Lax',
+    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax', 
   },
 }));
 
