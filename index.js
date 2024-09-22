@@ -62,7 +62,7 @@ app.use(session({
     maxAge: 1000 * 60 * 60 * 24, // 1 day
     secure: true, // Require HTTPS for cookie transmission
     httpOnly: true,
-    sameSite: 'None',
+    sameSite: 'Lax',
   },
 }));
 
