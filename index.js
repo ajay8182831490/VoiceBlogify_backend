@@ -98,16 +98,16 @@ const job = new CronJob('*/5 * * * *', async () => {
   }
 });
 job.start();
-app.use((req, res, next) => {
-  if (req.path.startsWith('/posts') && ['POST', 'PATCH', 'PUT', 'DELETE'].includes(req.method)) {
-    return next();
-  }
+// app.use((req, res, next) => {
+//   if (req.path.startsWith('/posts') && ['POST', 'PATCH', 'PUT', 'DELETE'].includes(req.method)) {
+//     return next();
+//   }
 
-  // Ather routes
-  req.body = sanitize(req.body);
-  req.query = sanitize(req.query);
-  next();
-});
+//   // Ather routes
+//   req.body = sanitize(req.body);
+//   req.query = sanitize(req.query);
+//   next();
+// });
 
 
 app.use(authRoutes);
