@@ -8,15 +8,19 @@ import { logInfo } from '../utils/logger.js';
 
 const router = express.Router();
 const otpRateLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute window
-  max: 2, // limit each IP to 5 requests per windowMs
+  windowMs: 60 * 1000,
+  max: 3,
   message: "Too many OTP requests from this IP, please try again after an hour"
 });
+const loginRateLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 4,
+  message: "Too many login attempts, please try again later."
+})
 
 
 
-
-router.post('/login', (req, res, next) => {
+router.post('/login', loginRateLimiter, (req, res, next) => {
 
   passport.authenticate('local', (err, user, info) => {
     if (err) return next(err);
@@ -30,9 +34,7 @@ router.post('/login', (req, res, next) => {
         message: 'Login successful',
         authenticated: true,
         name: user.name,
-        id: user.id,
-        profilepic: user.profilepic,
-        blogCount: user.blogCount,
+
       });
     });
   })(req, res, next);
@@ -41,12 +43,12 @@ router.post('/login', (req, res, next) => {
 
 
 
-router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+router.get('/auth/google', loginRateLimiter, passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 router.get('/auth/google/callback',
   passport.authenticate('google', { failureRedirect: 'https://voiceblogify.netlify.app/login' }),
   (req, res) => {
-    console.log('User object from Google callback:', req.user); // Log user info
+
 
     if (req.user) {
       req.session.userId = req.user.id;
@@ -59,14 +61,12 @@ router.get('/auth/google/callback',
 )
 
 
-router.post('/register', registerUser);
+router.post('/register', loginRateLimiter, registerUser);
 router.get('/logout', ensureAuthenticated, logoutUser);
 router.post('/otpGenrator', otpRateLimiter, otpGeneration)
 router.put('/resetPassword', otpRateLimiter, resetPassword)
 router.get('/status', checkAuth);
 router.patch('/passwordChange', ensureAuthenticated, otpRateLimiter, passwordChange)
-router.get('/test-auth', checkAuth, (req, res) => {
-  res.send('You are authenticated!');
-});
+
 
 export default router;

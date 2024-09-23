@@ -12,15 +12,13 @@ import rateLimit from 'express-rate-limit';
 import session from 'express-session';
 import connectMongoDBSession from 'connect-mongodb-session';
 import mongoose from 'mongoose';
+import mediumRoutes from './src/medium/routes/mediumRoutes.js'
 
 dotenv.config();
 
 const port = process.env.PORT || 3000;
 const app = express();
-//import cookieParser from 'cookie-parser';
 
-// Add this line after you set up express.json()
-//app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
@@ -52,6 +50,7 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
 });
+
 
 
 const corsOptions = {
@@ -98,20 +97,12 @@ const job = new CronJob('*/5 * * * *', async () => {
   }
 });
 job.start();
-// app.use((req, res, next) => {
-//   if (req.path.startsWith('/posts') && ['POST', 'PATCH', 'PUT', 'DELETE'].includes(req.method)) {
-//     return next();
-//   }
 
-//   // Ather routes
-//   req.body = sanitize(req.body);
-//   req.query = sanitize(req.query);
-//   next();
-// });
 
 
 app.use(authRoutes);
 app.use(linkdeinRoutes);
+app.use(mediumRoutes)
 //app.use(redditRoutes);
 app.use(transcriptionRoutes);
 app.use(postOperation);
@@ -122,7 +113,7 @@ app.use((err, req, res, next) => {
   res.status(err.status || 500).json({ message: err.message || 'Internal Server Error' });
 });
 
-// Start server
+
 app.listen(port, () => {
   console.log("Server is running on port", port);
 });

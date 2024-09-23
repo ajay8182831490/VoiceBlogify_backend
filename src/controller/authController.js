@@ -50,7 +50,7 @@ export const registerUser = async (req, res) => {
       minNumbers: 1,
       minSymbols: 1
     })) {
-      return res.status(400).json({ message: 'Weak password' });
+      return res.status(400).json({ message: 'Weak password ! Please enter a strong passsowrd' });
     }
 
     // Validate name
@@ -89,11 +89,8 @@ export const registerUser = async (req, res) => {
       return res.status(201).json({
         message: 'User registered and logged in successfully',
         authenticated: true,
-        user: {
-          name: user.name,
-          id: user.id,
-          email: user.email
-        }
+
+
       });
     });
 
@@ -154,7 +151,7 @@ export const resetPassword = async (req, res) => {
       minNumbers: 1,
       minSymbols: 1
     })) {
-      return res.status(400).json({ message: 'Weak password' });
+      return res.status(400).json({ message: 'Weak password ! Please enter a strong passsowrd' });
     }
     if (!otp || !/^\d{4}$/.test(otp)) {
       return res.status(400).json({ message: 'OTP must be a 4-digit number.' });
@@ -226,7 +223,7 @@ export const passwordChange = async (req, res) => {
       minNumbers: 1,
       minSymbols: 1
     })) {
-      return res.status(400).json({ message: 'Weak password' });
+      return res.status(400).json({ message: 'Weak password ! Please enter a strong passsowrd' });
     }
 
     const user = await prisma.user.findFirst({
@@ -317,6 +314,9 @@ export const checkAuth = async (req, res, next) => {
       name: req.user.name,
       id: req.user.id,
       profilepic: req.user.profilepic,
+      isVerfied: req.user.isVerfied,
+
+
     });
   }
 

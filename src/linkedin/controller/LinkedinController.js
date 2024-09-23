@@ -18,8 +18,8 @@ export const connect_to_linkedin = async (req, res) => {
     );
 
     try {
-        const accessToken = req.linkedinToken; // Use the token set by the middleware
-        const personId = req.personId; // Use the LinkedIn user ID set by the middleware
+        const accessToken = req.linkedinToken;
+        const personId = req.personId;
 
         res
             .status(200)
