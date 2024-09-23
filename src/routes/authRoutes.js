@@ -17,34 +17,30 @@ const otpRateLimiter = rateLimit({
 
 
 router.post('/login', (req, res, next) => {
-
-
   passport.authenticate('local', (err, user, info) => {
-
     if (err) {
-
       return next(err);
     }
 
-
-
-    // Log the failure message
     if (!user) {
-
       return res.status(401).json({ message: info.message || 'Authentication failed' });
     }
 
     req.logIn(user, (err) => {
       if (err) {
-
         return next(err);
       }
+      console.log('User logged in:', req.user);
+      console.log('Session after login:', req.session);
 
+      // Check if cookies are set
+      console.log('Cookies:', req.cookies);
 
-      return res.status(200).json({ message: 'Login successful', authenticated: true, name: user.name, id: user.id, profilepic: user.profilepic, blogCount: user.blogCount });
+      return res.status(200).json({ message: 'Login successful', authenticated: true, name: user.name, id: user.id, profilepic: user.profilepic });
     });
   })(req, res, next);
 });
+
 
 
 
@@ -53,9 +49,18 @@ router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 
 router.get('/auth/google/callback',
   passport.authenticate('google', { failureRedirect: 'https://voiceblogify.netlify.app/login' }),
   (req, res) => {
-    req.session.userId = req.user.id;
+    console.log('User object from Google callback:', req.user); // Log user info
+
+    if (req.user) {
+      req.session.userId = req.user.id; // Ensure user ID is set in session
+      console.log('Session after login:', req.session); // Log session info
+    } else {
+      console.log('No user found, session will not be set');
+    }
+
     res.redirect('https://voiceblogify.netlify.app/?login=success');
-  });
+  }
+)
 
 
 router.post('/register', registerUser);
