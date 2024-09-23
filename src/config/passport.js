@@ -25,7 +25,12 @@ passport.use(new LocalStrategy(
         return done(null, false, { message: 'Invalid email format' });
       }
 
+         const user = await prisma.user.findUnique({ where: { email } });
 
+      if (!user) {
+        logInfo(`No user found with email: ${email}`, path.basename(__filename), 'LocalStrategy');
+        return done(null, false, { message: 'Please Enter a correct email.' });
+      }
       if (!validator.isStrongPassword(password, {
         minLength: 6,
         minLowercase: 1,
@@ -35,12 +40,7 @@ passport.use(new LocalStrategy(
       })) {
         return done(null, false, { message: 'Weak password' });
       }
-      const user = await prisma.user.findUnique({ where: { email } });
-
-      if (!user) {
-        logInfo(`No user found with email: ${email}`, path.basename(__filename), 'LocalStrategy');
-        return done(null, false, { message: 'Incorrect email.' });
-      }
+    
       if (user.googleId) {
         logInfo('User authenticated with Google attempting local login', path.basename(__filename), 'LocalStrategy');
         return done(null, false, { message: 'User authenticated with Google. Please use Google login.' });
