@@ -6,6 +6,9 @@ import bcrypt from 'bcrypt';
 import { logInfo, logError } from '../utils/logger.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+dotenv.config();
+import validator from 'validator'
 
 const __filename = fileURLToPath(import.meta.url);
 const prisma = new PrismaClient();
@@ -18,7 +21,20 @@ passport.use(new LocalStrategy(
   async (email, password, done) => {
     try {
       logInfo(`Looking for user with email: ${email}`, path.basename(__filename), 'LocalStrategy');
+      if (!validator.isEmail(email)) {
+        return done(null, false, { message: 'Invalid email format' });
+      }
 
+
+      if (!validator.isStrongPassword(password, {
+        minLength: 6,
+        minLowercase: 1,
+        minUppercase: 1,
+        minNumbers: 1,
+        minSymbols: 1
+      })) {
+        return done(null, false, { message: 'Weak password' });
+      }
       const user = await prisma.user.findUnique({ where: { email } });
 
       if (!user) {

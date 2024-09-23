@@ -53,42 +53,38 @@ const limiter = rateLimit({
   max: 100,
 });
 
-// CORS options
+
 const corsOptions = {
   origin: ['https://voiceblogify.netlify.app'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  credentials: true, // Allows sending cookies
+  credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['Set-Cookie'], // Expose Set-Cookie header
+  exposedHeaders: ['Set-Cookie'],
 };
 app.use(cors(corsOptions));
 
 
-// Session setup with MongoDB store
+
 app.use(session({
-    secret: process.env.SECRET_SESSION_KEY,
-    resave: false,
-    saveUninitialized: false,
-    store: store,
-    name: "voiceblogify",
-    cookie: {
-        secure: true, // Set to true in production
-        httpOnly: true,
-        maxAge: 1000 * 60 * 60 * 24, // 1 day
-        sameSite: 'none',
-    },
-    proxy: true, // Move this line here
+  secret: process.env.SECRET_SESSION_KEY,
+  resave: false,
+  saveUninitialized: false,
+  store: store,
+  name: "voiceblogify",
+  cookie: {
+    secure: true, // Set to true in production
+    httpOnly: true,
+    maxAge: 1000 * 60 * 60 * 24, // 1 day
+    sameSite: 'none',
+  },
+  proxy: true,
 }));
 
 
 app.use(passport.initialize());
 app.use(passport.session());
 
-/*app.use((req, res, next) => {
-    console.log('Session:', req.session);
-    console.log('Cookies:', req.cookies);
-    next();
-});*/
+
 
 
 app.get('/keep-alive', (req, res) => {
@@ -102,11 +98,21 @@ const job = new CronJob('*/5 * * * *', async () => {
   }
 });
 job.start();
+app.use((req, res, next) => {
+  if (req.path.startsWith('/posts') && ['POST', 'PATCH', 'PUT', 'DELETE'].includes(req.method)) {
+    return next();
+  }
+
+  // Ather routes
+  req.body = sanitize(req.body);
+  req.query = sanitize(req.query);
+  next();
+});
 
 
 app.use(authRoutes);
 app.use(linkdeinRoutes);
-app.use(redditRoutes);
+//app.use(redditRoutes);
 app.use(transcriptionRoutes);
 app.use(postOperation);
 

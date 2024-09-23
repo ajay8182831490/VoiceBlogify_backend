@@ -17,15 +17,14 @@ const otpRateLimiter = rateLimit({
 
 
 router.post('/login', (req, res, next) => {
+
   passport.authenticate('local', (err, user, info) => {
     if (err) return next(err);
     if (!user) return res.status(401).json({ message: info.message || 'Authentication failed' });
 
     req.logIn(user, (err) => {
       if (err) return next(err);
-     // console.log('User logged in:', req.user);
-     // console.log('Session:', req.session);
-     // console.log('Set-Cookie header:', res.getHeaders()['set-cookie']); // Check if cookie is set
+
 
       return res.status(200).json({
         message: 'Login successful',
@@ -50,8 +49,7 @@ router.get('/auth/google/callback',
     console.log('User object from Google callback:', req.user); // Log user info
 
     if (req.user) {
-      req.session.userId = req.user.id; // Ensure user ID is set in session
-      //console.log('Session after login:', req.session); // Log session info
+      req.session.userId = req.user.id;
     } else {
       console.log('No user found, session will not be set');
     }
@@ -65,7 +63,7 @@ router.post('/register', registerUser);
 router.get('/logout', ensureAuthenticated, logoutUser);
 router.post('/otpGenrator', otpRateLimiter, otpGeneration)
 router.put('/resetPassword', otpRateLimiter, resetPassword)
-router.get('/status',checkAuth);
+router.get('/status', checkAuth);
 router.patch('/passwordChange', ensureAuthenticated, otpRateLimiter, passwordChange)
 router.get('/test-auth', checkAuth, (req, res) => {
   res.send('You are authenticated!');
