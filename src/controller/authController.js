@@ -250,8 +250,8 @@ export const otpGeneration = async (req, res) => {
 
 }
 export const checkAuth = async (req, res, next) => {
-  console.log('Authentication check:', req.user); // Log the user object
-  console.log('Cookies:', req.cookies); // Log the cookies
+ // console.log('Authentication check:', req.user); // Log the user object
+//  console.log('Cookies:', req.cookies); // Log the cookies
 
   if (req.isAuthenticated()) {
     return res.status(200).json({
