@@ -30,11 +30,12 @@ router.post('/login', (req, res, next) => {
       if (err) {
         return next(err);
       }
-      console.log('User logged in:', req.user);
-      console.log('Session after login:', req.session);
 
-      // Check if cookies are set
-      console.log('Cookies:', req.cookies);
+      console.log('User logged in:', req.user);
+      console.log('Session:', req.session); // Check session data
+
+      // Ensure you're sending the response after the session is established
+    
 
       return res.status(200).json({ message: 'Login successful', authenticated: true, name: user.name, id: user.id, profilepic: user.profilepic });
     });
