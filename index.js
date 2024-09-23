@@ -57,8 +57,9 @@ const limiter = rateLimit({
 const corsOptions = {
   origin: ['https://voiceblogify.netlify.app'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  credentials: true,
+  credentials: true, // Allows sending cookies
   allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Set-Cookie'], // Expose Set-Cookie header
 };
 app.use(cors(corsOptions));
 
