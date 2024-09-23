@@ -76,6 +76,12 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
+app.use((req, res, next) => {
+    console.log('Session:', req.session);
+    console.log('Cookies:', req.cookies);
+    next();
+});
+
 
 app.get('/keep-alive', (req, res) => {
   res.send('Alive!');
