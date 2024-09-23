@@ -66,18 +66,18 @@ app.use(cors(corsOptions));
 
 // Session setup with MongoDB store
 app.use(session({
-  secret: process.env.SECRET_SESSION_KEY,
-  resave: false,
-  saveUninitialized: false,
-  store: store,
-  name:"voiceblogify"
-    proxy: true,
-  cookie: {
-    secure: true, // true if in production
-    httpOnly: true, // Prevent client-side access to the cookie
-    maxAge: 1000 * 60 * 60 * 24,// 1 day
-    sameSite: 'none',
-  }
+    secret: process.env.SECRET_SESSION_KEY,
+    resave: false,
+    saveUninitialized: false,
+    store: store,
+    name: "voiceblogify",
+    cookie: {
+        secure: true, // Set to true in production
+        httpOnly: true,
+        maxAge: 1000 * 60 * 60 * 24, // 1 day
+        sameSite: 'none',
+    },
+    proxy: true, // Move this line here
 }));
 
 
