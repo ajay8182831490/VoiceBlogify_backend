@@ -17,6 +17,10 @@ dotenv.config();
 
 const port = process.env.PORT || 3000;
 const app = express();
+import cookieParser from 'cookie-parser';
+
+// Add this line after you set up express.json()
+app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
