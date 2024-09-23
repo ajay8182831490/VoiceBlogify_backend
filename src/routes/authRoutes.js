@@ -23,9 +23,9 @@ router.post('/login', (req, res, next) => {
 
     req.logIn(user, (err) => {
       if (err) return next(err);
-      console.log('User logged in:', req.user);
-      console.log('Session:', req.session);
-      console.log('Set-Cookie header:', res.getHeaders()['set-cookie']); // Check if cookie is set
+     // console.log('User logged in:', req.user);
+     // console.log('Session:', req.session);
+     // console.log('Set-Cookie header:', res.getHeaders()['set-cookie']); // Check if cookie is set
 
       return res.status(200).json({
         message: 'Login successful',
@@ -51,7 +51,7 @@ router.get('/auth/google/callback',
 
     if (req.user) {
       req.session.userId = req.user.id; // Ensure user ID is set in session
-      console.log('Session after login:', req.session); // Log session info
+      //console.log('Session after login:', req.session); // Log session info
     } else {
       console.log('No user found, session will not be set');
     }
