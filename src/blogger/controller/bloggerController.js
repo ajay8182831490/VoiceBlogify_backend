@@ -12,6 +12,8 @@ import axios from "axios";
 const getBlOgId = async (req, res) => {
     try {
         const accessToken = req.user.accessToken;
+
+        console.log(accessToken);
         const response = await axios.get('https://www.googleapis.com/blogger/v3/users/self/blogs', {
             headers: {
                 Authorization: `Bearer ${accessToken}`,
@@ -19,7 +21,7 @@ const getBlOgId = async (req, res) => {
         });
 
         const blogs = response.data.items;
-
+       console.log(blogs);
         if (!blogs || blogs.length === 0) {
             return res.status(404).send('You need to create a blog before posting.');
         }
