@@ -11,7 +11,7 @@ const checkAuthBlogger = async (req, res, next) => {
             return next();
         } else {
 
-            console.log('User is authenticated with local email.');
+            
             req.session.returnTo = req.originalUrl;
             return res.redirect('/auth/google');
         }
