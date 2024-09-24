@@ -63,7 +63,6 @@ passport.use(new LocalStrategy(
     }
   }
 ));
-
 passport.use(new GoogleStrategy({
   clientID: process.env.clientid,
   clientSecret: process.env.clientsecret,
@@ -76,39 +75,35 @@ passport.use(new GoogleStrategy({
 
     logInfo(`Authenticating user with profile id ${googleId} or ${email}`, path.basename(__filename), 'GoogleStrategy');
 
+
     let user = await prisma.user.findUnique({ where: { email } });
 
     if (user) {
 
-      user.googleId = googleId;
-      user.name = name;
-      user.profilepic = photos?.[0]?.value;
-      user.accessToken = token; // Set accessToken here
-
-      await prisma.user.update({
+      user = await prisma.user.update({
         where: { id: user.id },
         data: {
           googleId,
           name,
           profilepic: photos?.[0]?.value,
-          accessToken: token, // Ensure this is included
+          userAccessToken: token,
           isVerified: true
         },
       });
     } else {
-      // Create new user record
-      const user = await prisma.user.create({
+
+      user = await prisma.user.create({
         data: {
-          googleId: profile.id,
-          name: profile.displayName,
-          email: profile.emails[0].value,
-          profilepic: profile.photos[0].value,
+          googleId,
+          name,
+          email,
+          profilepic: photos?.[0]?.value,
           isVerified: true,
-          accessToken: token,
+          userAccessToken: token,
         },
       });
-
     }
+
 
     return done(null, user);
   } catch (err) {
@@ -116,6 +111,7 @@ passport.use(new GoogleStrategy({
     return done(err);
   }
 }));
+
 
 
 

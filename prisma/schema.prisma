@@ -25,7 +25,7 @@ model User {
   otp         Int?
   tokens      Token[]  
   subscriptions Subscription[] 
-  accessToken String?  
+  userAccessToken String?  
   freeTrialStart DateTime?  
   role        UserRole  @default(USER)
   profilepic  String?
