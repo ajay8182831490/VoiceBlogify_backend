@@ -46,6 +46,9 @@ model Token {
   accessToken   String     // Access token for API requests
   refreshToken  String?    // Refresh token, if applicable
     // Token expiration time
+    
+
+  mediumApi String?
 
   postUrns    String[]   // Store multiple post URNs
 
@@ -60,7 +63,7 @@ model Payment {
   id              Int            @id @default(autoincrement())
   userId          String           // Foreign key reference
   user            User           @relation(fields: [userId], references: [id])
-  subscriptionId  Int            // Foreign key reference
+  subscriptionId  String            // Foreign key reference
   subscription    Subscription  @relation(fields: [subscriptionId], references: [id])
   amount          Float
   paymentDate     DateTime       @default(now())
@@ -77,7 +80,7 @@ model Feature {
       user            User           @relation(fields: [userId], references: [id])
 }
 model Subscription {
-  id                    Int        @id @default(autoincrement())
+  id                    String        @id @default (uuid())
   userId                String       // Foreign key reference
   user                  User       @relation(fields: [userId], references: [id])
   stripeSubscriptionId  String     // Stripe subscription ID
@@ -100,14 +103,15 @@ model Post {
   tags           String[]                               
   content        String                                  
   dateOfCreation DateTime? @default(now())    
-}           
+}    
+
 
 
 
 enum Platform {
   LINKEDIN
   MEDIUM
-  REDDIT
+
 BLOGGER
 
   // Add other platforms as needed

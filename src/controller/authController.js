@@ -6,13 +6,11 @@ import { sendEmailforOtp } from '../utils/util.js';
 import { fileURLToPath } from 'url';
 import path from 'path'
 import bcrypt from 'bcrypt';
+import sanitizeHtml from 'sanitize-html';
 
 const __filename = fileURLToPath(import.meta.url);
 const prisma = new PrismaClient();
-//const rateLimit = require('express-rate-limit');
-//
-import rateLimit from 'express-rate-limit';
-import exp from 'constants';
+import validator from 'validator'
 const generateOTP = () => {
   const otpLength = 4;
   const min = Math.pow(10, otpLength - 1);
@@ -25,24 +23,54 @@ const validateEmail = (email) => {
   return emailRegex.test(email);
 };
 
+
+
+
+
 export const registerUser = async (req, res) => {
-  const { email, password, name } = req.body;
-  logInfo(`going to register a new account for user email ${email} `, path.basename(__filename), registerUser);
+  let { email, password, name } = req.body;
+  logInfo(`Going to register a new account for user email ${email}`, path.basename(__filename));
 
   try {
+    // Sanitize inputs
+    name = sanitizeHtml(validator.trim(name));
+    email = validator.normalizeEmail(email);
+    password = validator.trim(password);
+
+    // Validate email
+    if (!validator.isEmail(email)) {
+      return res.status(400).json({ message: 'Invalid email format' });
+    }
+
+    // Validate password
+    if (!validator.isStrongPassword(password, {
+      minLength: 6,
+      minLowercase: 1,
+      minUppercase: 1,
+      minNumbers: 1,
+      minSymbols: 1
+    })) {
+      return res.status(400).json({ message: 'Weak password ! Please enter a strong passsowrd' });
+    }
+
+    // Validate name
+    if (!name || name.length < 2 || !/^[A-Za-z\s'-]+$/.test(name)) {
+      return res.status(400).json({ message: 'Invalid name. Must be at least 2 characters and contain only letters, spaces, hyphens, and apostrophes.' });
+    }
+
     // Check if the user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email: email }
     });
 
     if (existingUser) {
-      return res.status(200).send({ message: 'User already exists', authenticated: false });
+      return res.status(400).json({ message: 'User already exists! Please try to login', authenticated: false });
     }
 
     // Hash the password
     const hashedPassword = await hashPassword(password);
 
-    // Create new user
+    // Create the new user
     const user = await prisma.user.create({
       data: {
         email: email,
@@ -51,43 +79,47 @@ export const registerUser = async (req, res) => {
       }
     });
 
-    // Log in the user after successful signup
+    // Login the user
     req.login(user, (err) => {
       if (err) {
         logError(err, path.basename(__filename));
         return res.status(500).json({ message: 'Login after signup failed' });
       }
 
-      // Return success response
       return res.status(201).json({
         message: 'User registered and logged in successfully',
         authenticated: true,
-        user: {
-          name: user.name,
-          id: user.id,
-          email: user.email
-        }
+
+
       });
     });
 
   } catch (err) {
     logError(err, path.basename(__filename));
-    return res.status(500).json({ messae: 'Error registering user' });
+    return res.status(500).json({ message: 'Erroroccur during registration' });
   }
 };
 
-export const logoutUser = (req, res) => {
-  req.logout((err) => {
+
+export const logoutUser = async (req, res) => {
+  req.logout(async (err) => {
     if (err) {
-      return res.status(500).send('Error logging out');
+      return res.status(500).json({ message: 'Error occured during logout' });
     }
-    req.session.destroy((err) => {
-      if (err) {
-        return res.status(500).send('Error destroying session');
-      }
-      res.clearCookie('connect.sid'); // This clears the session cookie
-      res.send('User logged out successfully');
-    });
+
+    try {
+
+      await req.session.destroy();
+
+      /* await prisma.session.delete({
+         where: { sid: req.session.id },
+       });*/
+
+      res.clearCookie('connect.sid');
+      res.send('Logged out successfully');
+    } catch (error) {
+      return res.status(500).json({ message: 'Error destroying session' });
+    }
   });
 };
 
@@ -99,15 +131,36 @@ export const resetPassword = async (req, res) => {
   logInfo(`going to reset the password for the user ${email}`, path.basename(__filename), resetPassword);
 
   try {
-    // here firstle verify the user and  expiry time link and after that we will verify the otp
+
+
 
     const { otp, email, password } = req.body;
-
-
-
     if (!otp || !email || !password) {
       return res.status(400).json({ message: 'missing field required' });
     }
+    email = validator.normalizeEmail(email);
+    otp = validator.trim(otp);
+    password = validator.trim(password);
+    if (!validator.isEmail(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+    if (!validator.isStrongPassword(password, {
+      minLength: 6,
+      minLowercase: 1,
+      minUppercase: 1,
+      minNumbers: 1,
+      minSymbols: 1
+    })) {
+      return res.status(400).json({ message: 'Weak password ! Please enter a strong passsowrd' });
+    }
+    if (!otp || !/^\d{4}$/.test(otp)) {
+      return res.status(400).json({ message: 'OTP must be a 4-digit number.' });
+    }
+
+
+
+
+
 
     const existingUser = await prisma.user.findUnique({
       where: {
@@ -115,7 +168,7 @@ export const resetPassword = async (req, res) => {
       }
     })
     if (!existingUser) {
-      return res.status(402).json({ message: "user not exist" });
+      return res.status(402).json({ message: "user does not exist please enter the valid email or signup" });
 
     }
     const { expiryTime: storedExpiryTime, otp: storedOtp } = existingUser;
@@ -132,7 +185,7 @@ export const resetPassword = async (req, res) => {
       return res.status(401).json({ message: "Invalid OTP." });
     }
 
-    // now here we will HASHED THE PASSWORD
+
     const hashedPassword = await hashPassword(password);
 
     await prisma.user.update({
@@ -161,6 +214,18 @@ export const passwordChange = async (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;
 
+    password = validator.trim(password);
+
+    if (!validator.isStrongPassword(newPassword, {
+      minLength: 6,
+      minLowercase: 1,
+      minUppercase: 1,
+      minNumbers: 1,
+      minSymbols: 1
+    })) {
+      return res.status(400).json({ message: 'Weak password ! Please enter a strong passsowrd' });
+    }
+
     const user = await prisma.user.findFirst({
       where: {
         id: req.userId
@@ -174,7 +239,6 @@ export const passwordChange = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Compare the provided old password with the stored password
     const isMatch = await bcrypt.compare(oldPassword, user.password);
 
     if (!isMatch) {
@@ -243,8 +307,6 @@ export const otpGeneration = async (req, res) => {
 
 }
 export const checkAuth = async (req, res, next) => {
-  console.log('Authentication check:', req.user); // Log the user object
-  console.log('Cookies:', req.cookies); // Log the cookies
 
   if (req.isAuthenticated()) {
     return res.status(200).json({
@@ -252,9 +314,12 @@ export const checkAuth = async (req, res, next) => {
       name: req.user.name,
       id: req.user.id,
       profilepic: req.user.profilepic,
+      isVerfied: req.user.isVerfied,
+
+
     });
   }
-  
+
   return res.status(401).json({ authenticated: false });
 };
 
