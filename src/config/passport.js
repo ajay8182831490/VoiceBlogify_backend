@@ -76,39 +76,38 @@ passport.use(new GoogleStrategy({
 
     logInfo(`Authenticating user with profile id ${googleId} or ${email}`, path.basename(__filename), 'GoogleStrategy');
 
-    // Look for existing user by email
     let user = await prisma.user.findUnique({ where: { email } });
 
     if (user) {
-      // Update user information if they exist
+
       user.googleId = googleId;
       user.name = name;
       user.profilepic = photos?.[0]?.value;
-      user.accessToken = token; // Update access token if needed
+      user.accessToken = token; // Set accessToken here
 
-      // Save updated user info to the database
       await prisma.user.update({
         where: { id: user.id },
         data: {
           googleId,
           name,
           profilepic: photos?.[0]?.value,
-          accessToken: token,
-          isVerified: true,
+          accessToken: token, // Ensure this is included
+          isVerified: true
         },
       });
     } else {
-
-      user = await prisma.user.create({
+      // Create new user record
+      const user = await prisma.user.create({
         data: {
-          googleId,
-          name,
-          email,
-          profilepic: photos?.[0]?.value,
+          googleId: profile.id,
+          name: profile.displayName,
+          email: profile.emails[0].value,
+          profilepic: profile.photos[0].value,
           isVerified: true,
           accessToken: token,
         },
       });
+
     }
 
     return done(null, user);
@@ -117,6 +116,7 @@ passport.use(new GoogleStrategy({
     return done(err);
   }
 }));
+
 
 
 

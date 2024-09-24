@@ -15,28 +15,27 @@ datasource db {
 
 model User {
   id          String   @id @default(uuid())
-  email          String  @unique   // here we have need to adjust in db
-  password       String?    // Nullable, for email/password authentication
-  googleId       String?   @unique  // Nullable, for Google OAuth authentication
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-  name      String?
+  email       String   @unique
+  password    String?  
+  googleId    String?  @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  name        String?
   expiryTime  DateTime?
-  otp   Int?
-  tokens         Token[]    
-  subscriptions  Subscription[] 
-  accessToken String?
+  otp         Int?
+  tokens      Token[]  
+  subscriptions Subscription[] 
+  accessToken String?  
   freeTrialStart DateTime?  
-  role           UserRole   @default(USER)
-
-  profilepic String?
-
-    payments         Payment[]
-    features     Feature []
-   blogCount  Int       @default(0)
-   isVerified Boolean @default(false)
-   post Post[]
+  role        UserRole  @default(USER)
+  profilepic  String?
+  payments    Payment[]
+  features    Feature[]
+  blogCount   Int @default(0)
+  isVerified  Boolean @default(false)
+  post        Post[]
 }
+
 model Token {
   id            Int        @id @default(autoincrement())
   userId        String      
