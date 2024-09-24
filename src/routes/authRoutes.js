@@ -97,9 +97,9 @@ router.get('/auth/google/callback',
   },
   (req, res) => {
     
-     console.log(req.user);
+    
     const accessToken = req.user.userAccessToken; 
-    console.log(accessToken)/// Assign access token from user object
+
     req.session.accessToken = accessToken; // Store the access token in session
 
     const redirectUrl = req.session.returnTo || 'https://voiceblogify.netlify.app/?login=success';
