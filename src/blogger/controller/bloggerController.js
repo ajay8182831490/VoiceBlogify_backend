@@ -11,7 +11,7 @@ import { PrismaClient } from "@prisma/client";
 
 const getBlOgId = async (req, res) => {
     try {
-        const accessToken = req.user.accessToken;
+        const accessToken = req.user.userAccessToken;
         const response = await axios.get('https://www.googleapis.com/blogger/v3/users/self/blogs', {
             headers: {
                 Authorization: `Bearer ${accessToken}`,
@@ -36,7 +36,7 @@ const createBlog = async (req, res) => {
     const { blogId, postContent } = req.body;
 
     try {
-        const accessToken = req.user.accessToken; // Use the updated access token
+        const accessToken = req.user.userAccessToken; // Use the updated access token
         const response = await axios.post(`https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts`, {
             kind: 'blogger#post',
             title: 'Your Post Title', // or take it from user input
@@ -58,7 +58,7 @@ const deleteBloggerPost = async (req, res) => {
     const { blogId, postId } = req.params;
 
     try {
-        const accessToken = req.user.accessToken; // Get the access token from the user session
+        const accessToken = req.user.userAccessToken; // Get the access token from the user session
         await axios.delete(`https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts/${postId}`, {
             headers: {
                 Authorization: `Bearer ${accessToken}`,
@@ -76,7 +76,7 @@ const getBloggerPost = async (req, res) => {
     const { blogId } = req.params;
 
     try {
-        const accessToken = req.user.accessToken; // Get the access token from the user session
+        const accessToken = req.user.userAccessToken; // Get the access token from the user session
         const response = await axios.get(`https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts`, {
             headers: {
                 Authorization: `Bearer ${accessToken}`,
