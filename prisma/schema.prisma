@@ -15,7 +15,7 @@ datasource db {
 
 model User {
   id          String   @id @default(uuid())
-  email          String     // here we have need to adjust in db
+  email          String  @unique   // here we have need to adjust in db
   password       String?    // Nullable, for email/password authentication
   googleId       String?   @unique  // Nullable, for Google OAuth authentication
   createdAt      DateTime   @default(now())
@@ -25,6 +25,7 @@ model User {
   otp   Int?
   tokens         Token[]    
   subscriptions  Subscription[] 
+  accessToken String?
   freeTrialStart DateTime?  
   role           UserRole   @default(USER)
 

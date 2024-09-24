@@ -1,6 +1,7 @@
 import { logError, logInfo } from "../../utils/logger.js";
 import path from 'path'
 import { fileURLToPath } from "url";
+import axios from "axios";
 
 const __filename = fileURLToPath(import.meta.url);
 import { PrismaClient } from "@prisma/client";

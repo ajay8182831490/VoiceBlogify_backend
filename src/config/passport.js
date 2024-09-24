@@ -68,36 +68,57 @@ passport.use(new GoogleStrategy({
   clientID: process.env.clientid,
   clientSecret: process.env.clientsecret,
   callbackURL: 'https://voiceblogify-backend.onrender.com/auth/google/callback',
-  scope: ['openid', 'profile', 'email'],
+  scope: ['openid', 'profile', 'email', 'https://www.googleapis.com/auth/blogger'],
 }, async (token, tokenSecret, profile, done) => {
   try {
     const { id: googleId, displayName: name, emails, photos } = profile;
     const email = emails?.[0]?.value;
-    logInfo(`Creating an account for user with profile id ${googleId}`, path.basename(__filename), 'GoogleStrategy');
 
-    let user = await prisma.user.findUnique({ where: { googleId } });
+    logInfo(`Authenticating user with profile id ${googleId} or ${email}`, path.basename(__filename), 'GoogleStrategy');
 
-    if (!user) {
-      const existingUserWithEmail = await prisma.user.findUnique({ where: { email } });
-      if (existingUserWithEmail) {
-        return done(null, false, { message: 'An account with this email already exists. Please log in using email and password.' });
-      }
+    // Look for existing user by email
+    let user = await prisma.user.findUnique({ where: { email } });
+
+    if (user) {
+      // Update user information if they exist
+      user.googleId = googleId;
+      user.name = name;
+      user.profilepic = photos?.[0]?.value;
+      user.accessToken = token; // Update access token if needed
+
+      // Save updated user info to the database
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          googleId,
+          name,
+          profilepic: photos?.[0]?.value,
+          accessToken: token,
+          isVerified: true,
+        },
+      });
+    } else {
+
       user = await prisma.user.create({
         data: {
           googleId,
           name,
           email,
           profilepic: photos?.[0]?.value,
-          isVerified: true
-        }
+          isVerified: true,
+          accessToken: token,
+        },
       });
     }
+
     return done(null, user);
   } catch (err) {
     logError(err, path.basename(__filename));
     return done(err);
   }
 }));
+
+
 
 passport.serializeUser((user, done) => {
   done(null, user.id);

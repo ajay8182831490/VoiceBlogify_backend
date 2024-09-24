@@ -90,21 +90,21 @@ router.get('/auth/google', (req, res, next) => {
 
 router.get('/auth/google/callback',
   (req, res, next) => {
-
     if (req.isAuthenticated()) {
-
       return next();
     }
-
-    passport.authenticate('google', { failureRedirect: '/login' })(req, res, next); // Corrected failureRedirect URL
+    passport.authenticate('google', { failureRedirect: '/login' })(req, res, next);
   },
   (req, res) => {
+    const accessToken = req.user.accessToken; // Assign access token from user object
+    req.session.accessToken = accessToken; // Store the access token in session
 
     const redirectUrl = req.session.returnTo || 'https://voiceblogify.netlify.app/?login=success';
     delete req.session.returnTo;
     res.redirect(redirectUrl);
   }
 );
+
 
 
 router.post('/register', loginRateLimiter, registerUser);
