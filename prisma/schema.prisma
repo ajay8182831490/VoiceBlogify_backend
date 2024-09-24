@@ -15,7 +15,7 @@ datasource db {
 
 model User {
   id          String   @id @default(uuid())
-  email          String     @unique
+  email          String     // here we have need to adjust in db
   password       String?    // Nullable, for email/password authentication
   googleId       String?   @unique  // Nullable, for Google OAuth authentication
   createdAt      DateTime   @default(now())
