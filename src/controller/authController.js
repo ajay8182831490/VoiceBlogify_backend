@@ -29,7 +29,7 @@ const validateEmail = (email) => {
 
 export const registerUser = async (req, res) => {
   let { email, password, name } = req.body;
-  logInfo(`Going to register a new account for user email ${email}`, path.basename(__filename));
+  logInfo(`Attempting to register a new account for user email: ${email}`, path.basename(__filename));
 
   try {
     // Sanitize inputs
@@ -39,6 +39,7 @@ export const registerUser = async (req, res) => {
 
     // Validate email
     if (!validator.isEmail(email)) {
+      logInfo(`Invalid email format: ${email}`, path.basename(__filename));
       return res.status(400).json({ message: 'Invalid email format' });
     }
 
@@ -50,11 +51,13 @@ export const registerUser = async (req, res) => {
       minNumbers: 1,
       minSymbols: 1
     })) {
-      return res.status(400).json({ message: 'Weak password ! Please enter a strong password' });
+      logInfo(`Weak password for email: ${email}`, path.basename(__filename));
+      return res.status(400).json({ message: 'Weak password! Please enter a strong password' });
     }
 
     // Validate name
     if (!name || name.length < 2 || !/^[A-Za-z\s'-]+$/.test(name)) {
+      logInfo(`Invalid name provided for email: ${email}`, path.basename(__filename));
       return res.status(400).json({ message: 'Invalid name. Must be at least 2 characters and contain only letters, spaces, hyphens, and apostrophes.' });
     }
 
@@ -64,6 +67,7 @@ export const registerUser = async (req, res) => {
     });
 
     if (existingUser) {
+      logInfo(`User already exists for email: ${email}`, path.basename(__filename));
       return res.status(400).json({ message: 'User already exists! Please try to login', authenticated: false });
     }
 
@@ -79,13 +83,14 @@ export const registerUser = async (req, res) => {
       }
     });
 
-    // Login the user after signup
-    return req.login(user, (err) => {
+    // Attempt to log in the user
+    req.login(user, (err) => {
       if (err) {
         logError(err, path.basename(__filename));
         return res.status(500).json({ message: 'Login after signup failed' });
       }
 
+      logInfo(`User registered and logged in successfully: ${email}`, path.basename(__filename));
       return res.status(201).json({
         message: 'User registered and logged in successfully',
         authenticated: true,

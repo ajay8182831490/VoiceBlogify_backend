@@ -40,7 +40,7 @@ passport.use(new LocalStrategy(
         minNumbers: 1,
         minSymbols: 1
       })) {
-        return done(null, false, { message: 'Weak password' });
+        return done(null, false, { message: ' Weak password !Please enter correct password' });
       }
 
       if (user.googleId) {
