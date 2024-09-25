@@ -50,7 +50,7 @@ export const registerUser = async (req, res) => {
       minNumbers: 1,
       minSymbols: 1
     })) {
-      return res.status(400).json({ message: 'Weak password ! Please enter a strong passsowrd' });
+      return res.status(400).json({ message: 'Weak password ! Please enter a strong password' });
     }
 
     // Validate name
@@ -58,7 +58,7 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({ message: 'Invalid name. Must be at least 2 characters and contain only letters, spaces, hyphens, and apostrophes.' });
     }
 
-    // Check if the user already exists
+    // Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email: email }
     });
@@ -67,10 +67,10 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({ message: 'User already exists! Please try to login', authenticated: false });
     }
 
-    // Hash the password
+    // Hash password
     const hashedPassword = await hashPassword(password);
 
-    // Create the new user
+    // Create new user
     const user = await prisma.user.create({
       data: {
         email: email,
@@ -79,8 +79,8 @@ export const registerUser = async (req, res) => {
       }
     });
 
-    // Login the user
-    req.login(user, (err) => {
+    // Login the user after signup
+    return req.login(user, (err) => {
       if (err) {
         logError(err, path.basename(__filename));
         return res.status(500).json({ message: 'Login after signup failed' });
@@ -89,16 +89,15 @@ export const registerUser = async (req, res) => {
       return res.status(201).json({
         message: 'User registered and logged in successfully',
         authenticated: true,
-
-
       });
     });
 
   } catch (err) {
     logError(err, path.basename(__filename));
-    return res.status(500).json({ message: 'Erroroccur during registration' });
+    return res.status(500).json({ message: 'Error occurred during registration' });
   }
 };
+
 
 
 export const logoutUser = async (req, res) => {

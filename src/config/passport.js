@@ -48,7 +48,7 @@ passport.use(new LocalStrategy(
         return done(null, false, { message: 'User authenticated with Google. Please use Google login.' });
       }
 
-      // Check if the password matches
+
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
         logInfo('Password mismatch', path.basename(__filename), 'LocalStrategy');
