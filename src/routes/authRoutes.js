@@ -8,14 +8,18 @@ import { registerUser, logoutUser, resetPassword, otpGeneration, checkAuth, pass
 
 const router = express.Router();
 const otpRateLimiter = rateLimit({
-  windowMs: 60 * 1000,
+  windowMs: 2 * 60 * 1000,
   max: 3,
-  message: "Too many OTP requests from this IP, please try again after an hour"
+  handler: (req, res) => {
+    res.status(429).json({ message: "Too many otp request attempts, please try again later." });
+  }
 });
 const loginRateLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 4,
-  message: "Too many login attempts, please try again later."
+  handler: (req, res) => {
+    res.status(429).json({ message: "Too many login attempts, please try again later." });
+  }
 })
 
 

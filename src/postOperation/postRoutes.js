@@ -8,7 +8,9 @@ import rateLimit from 'express-rate-limit';
 const RequestRateLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 4,
-    message: "Too many request try again later ."
+    handler: (req, res) => {
+        res.status(429).json({ message: "Too many request, please try again later." });
+    }
 })
 
 router.get('/user/post/:postId', RequestRateLimiter, ensureAuthenticated, getUserPost);
