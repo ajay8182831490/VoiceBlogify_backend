@@ -312,19 +312,17 @@ export const otpGeneration = async (req, res) => {
 
 }
 export const checkAuth = async (req, res, next) => {
-
   if (req.isAuthenticated()) {
     return res.status(200).json({
       authenticated: true,
       name: req.user.name,
       id: req.user.id,
-      profilepic: req.user.profilepic,
+      profilepic: req.user.profilepic || null, // Return null if profilepic is not present
       isVerfied: req.user.isVerfied,
-
-
     });
   }
 
   return res.status(401).json({ authenticated: false });
 };
+
 
