@@ -4,7 +4,7 @@ import passport from '../config/passport.js';
 import rateLimit from 'express-rate-limit';
 import { ensureAuthenticated } from '../middleware/authMiddleware.js';
 import { registerUser, logoutUser, resetPassword, otpGeneration, checkAuth, passwordChange } from '../controller/authController.js';
-import { logInfo } from '../utils/logger.js';
+
 
 const router = express.Router();
 const otpRateLimiter = rateLimit({
@@ -43,41 +43,6 @@ router.post('/login', loginRateLimiter, (req, res, next) => {
 
 
 
-/*router.get('/auth/google', loginRateLimiter, passport.authenticate('google', {
-  scope: ['profile', 'email', 'https://www.googleapis.com/auth/blogger']
-}));
-
-/*router.get('/auth/google/callback',
-  passport.authenticate('google', { failureRedirect: 'https://voiceblogify.netlify.app/login' }),
-  (req, res) => {
-
-
-    if (req.user) {
-      req.session.userId = req.user.id;
-    } else {
-      console.log('No user found, session will not be set');
-    }
-
-    res.redirect('https://voiceblogify.netlify.app/?login=success');
-  }
-)*/
-/*router.get('/auth/google/callback',
-  (req, res, next) => {
-    // Check if the user is logged in locally before authenticating with Google
-    if (req.isAuthenticated()) {
-
-      return next();
-    }
-    // User is not authenticated locally, proceed with Google authentication
-    passport.authenticate('google', { failureRedirect: '/https://voiceblogify.netlify.app/login' })(req, res, next);
-  },
-  (req, res) => {
-
-    const redirectUrl = req.session.returnTo || 'https://voiceblogify.netlify.app/?login=success';
-    delete req.session.returnTo;
-    res.redirect(redirectUrl);
-  }
-);*/
 
 router.get('/auth/google', (req, res, next) => {
 
@@ -96,8 +61,11 @@ router.get('/auth/google/callback',
     passport.authenticate('google', { failureRedirect: '/login' })(req, res, next);
   },
   (req, res) => {
-    const accessToken = req.user.userAccessToken; // Assign access token from user object
-    req.session.accessToken = accessToken; // Store the access token in session
+
+
+    const accessToken = req.user.userAccessToken;
+
+    req.session.accessToken = accessToken;
 
     const redirectUrl = req.session.returnTo || 'https://voiceblogify.netlify.app/?login=success';
     delete req.session.returnTo;

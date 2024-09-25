@@ -6,8 +6,13 @@ import { deletePost, getPostById, uploadPost, uploadImage } from '../controller/
 import { ensureAuthenticated } from '../../middleware/authMiddleware.js';
 import multer from 'multer';
 import { body } from "express-validator";
+const RequestRateLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 4,
+    message: "Too many request try again later ."
+})
 const upload = multer({
-    dest: 'uploads/',
+    //dest: 'uploads/',
     fileFilter: (req, file, cb) => {
         const filetypes = /jpeg|jpg|png|gif/;
         const mimetype = filetypes.test(file.mimetype);
@@ -26,9 +31,9 @@ const validatePost = [
 ];
 router.get('/url', mediumUrl);
 
-router.delete('/medium/post/:postId', ensureAuthenticated, mediumUrl, deletePost);
-router.get('/medium/getPost/:postId', ensureAuthenticated, mediumUrl, getPostById);
-router.post('/medium/post', ensureAuthenticated, mediumUrl, validatePost, uploadPost);
-router.post('/medium/uploadImage', ensureAuthenticated, upload.single('image'), mediumUrl, uploadImage);
+router.delete('/medium/post/:postId', RequestRateLimiter, ensureAuthenticated, mediumUrl, deletePost);
+router.get('/medium/getPost/:postId', RequestRateLimiter, ensureAuthenticated, mediumUrl, getPostById);
+router.post('/medium/post', RequestRateLimiter, ensureAuthenticated, mediumUrl, validatePost, uploadPost);
+router.post('/medium/uploadImage', RequestRateLimiter, ensureAuthenticated, upload.single('image'), mediumUrl, uploadImage);
 
 export default router

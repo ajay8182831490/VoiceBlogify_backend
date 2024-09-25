@@ -8,6 +8,10 @@ import FormData from "form-data"; // Ensure you import FormData
 
 const prisma = new PrismaClient();
 const __filename = fileURLToPath(import.meta.url);
+import { JSDOM } from 'jsdom'
+import DOMPurify from 'dompurify';
+const window = (new JSDOM('')).window;
+const purify = DOMPurify(window);
 
 const handleValidationErrors = (req, res) => {
     const errors = validationResult(req);
@@ -56,13 +60,18 @@ const uploadPost = async (req, res) => {
     handleValidationErrors(req, res);
 
     try {
-        const { title, content, canonicalUrl, tags, publishStatus = 'public' } = req.body;
+        const { title, content, tags, publishStatus = 'public' } = req.body;
+
+        title = purify.sanitize(title);
+        content = purify.sanitize(content);
+        tags = purify.sanitize(tags);
+
 
         const response = await req.mediumApi.post(`/users/${req.mediumUserId}/posts`, {
             title,
             contentFormat: 'html',
             content,
-            canonicalUrl,
+
             tags,
             publishStatus
         });

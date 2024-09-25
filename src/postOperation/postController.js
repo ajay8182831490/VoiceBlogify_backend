@@ -6,6 +6,10 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
+import { JSDOM } from 'jsdom'
+import DOMPurify from 'dompurify';
+const window = (new JSDOM('')).window;
+const purify = DOMPurify(window);
 
 
 
@@ -92,7 +96,18 @@ const updateUserPost = async (req, res) => {
     logInfo(`Going to update the user post of user id ${req.userId} with postId ${postId}`, path.basename(__filename), updateUserPost);
 
     try {
-        const { title, subtitle, tag, content } = req.body;
+        let { title, subtitle, tag, content } = req.body;
+
+
+        if (!title && !subtitle && !tag && !content) {
+            return res.status(400).json({ message: "At least one field must be provided for update." });
+        }
+
+        // Sanitize inputs
+        title = title ? purify.sanitize(title) : undefined;
+        subtitle = subtitle ? purify.sanitize(subtitle) : undefined;
+        tag = tag ? Array.isArray(tag) ? tag.map(t => purify.sanitize(t)) : [purify.sanitize(tag)] : undefined;
+        content = content ? purify.sanitize(content) : undefined;
 
         // Check if the post exists
         const existingPost = await prisma.post.findUnique({
@@ -106,7 +121,6 @@ const updateUserPost = async (req, res) => {
             return res.status(404).json({ message: "Post not found or you do not have permission to update it." });
         }
 
-        // Prepare the update data
         const updateData = {
             ...(title && { title }),
             ...(subtitle && { subtitle }),
@@ -130,5 +144,46 @@ const updateUserPost = async (req, res) => {
     }
 }
 
+const saveUserPost = async (req, res) => {
+    logInfo(`Going to save the user post of user id ${req.userId}`, path.basename(__filename), saveUserPost);
 
-export { getUserPost, getAllPost, deleteUserPost, updateUserPost }
+    try {
+        let { title, subtitle, tag, content } = req.body;
+
+
+        if (!title && !subtitle && !tag && !content) {
+            return res.status(400).json({ message: "At least one field must be provided for the post." });
+        }
+
+
+        title = title ? purify.sanitize(title) : undefined;
+        subtitle = subtitle ? purify.sanitize(subtitle) : undefined;
+        tag = tag ? Array.isArray(tag) ? tag.map(t => purify.sanitize(t)) : [purify.sanitize(tag)] : undefined;
+        content = content ? purify.sanitize(content) : undefined;
+
+
+        const createData = {
+            ...(title && { title }),
+            ...(subtitle && { subtitle }),
+            ...(tag && { tag }),
+            ...(content && { content })
+        };
+
+
+        const newPost = await prisma.post.create({
+            data: {
+                userId: req.userId,
+                ...createData
+            }
+        });
+
+        res.status(201).json({ message: "Post created successfully.", postId: newPost.id }); // Return the new post ID
+    } catch (error) {
+        logError(error, path.basename(__filename));
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+
+
+export { getUserPost, getAllPost, deleteUserPost, updateUserPost, saveUserPost }

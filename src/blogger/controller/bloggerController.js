@@ -4,13 +4,20 @@ import { fileURLToPath } from "url";
 import axios from "axios";
 
 const __filename = fileURLToPath(import.meta.url);
-import { PrismaClient } from "@prisma/client";
+
+import { JSDOM } from 'jsdom'
+import DOMPurify from 'dompurify';
+const window = (new JSDOM('')).window;
+const purify = DOMPurify(window);
 
 
 
 
-const getBlOgId = async (req, res) => {
+const getBlogId = async (req, res) => {
+    logInfo(`going to access the getBlog of user ${req.userId}`, path.basename(__filename), getBlogId)
     try {
+
+
         const accessToken = req.user.accessToken;
         const response = await axios.get('https://www.googleapis.com/blogger/v3/users/self/blogs', {
             headers: {
@@ -27,36 +34,49 @@ const getBlOgId = async (req, res) => {
 
         res.status(200).json({ blogs });
     } catch (error) {
-        console.error(error);
+        logError(error, path.basename(__filename));
         res.status(500).send('Error fetching blogs');
     }
 }
 
 const createBlog = async (req, res) => {
-    const { blogId, postContent } = req.body;
+    logInfo(`going to post a blog on blooger for user ${req.userId}`, path.basename(__filename), createBlog)
+    const { blogId, postContent, title } = req.body;
+
+    if (!blogId || !postContent || !title) {
+        return res.status(400).json({ message: "missind field required" });
+    }
 
     try {
-        const accessToken = req.user.accessToken; // Use the updated access token
+
+        const cleanHTML = purify.sanitize(postContent);
+        const cleantitle = purify.sanitize(title)
+
+
+        const accessToken = req.user.accessToken;
         const response = await axios.post(`https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts`, {
             kind: 'blogger#post',
-            title: 'Your Post Title', // or take it from user input
-            content: postContent,
+            title: cleantitle,
+            content: cleanHTML,
         }, {
             headers: {
                 Authorization: `Bearer ${accessToken}`,
             },
         });
 
-        res.status(201).send('Post created successfully!');
+        res.status(201).json({ message: 'Post created successfully!' });
     } catch (error) {
-        console.error(error);
+        logError(error, path.basename(__filename));
         res.status(500).send('Error creating post');
     }
 }
 
 const deleteBloggerPost = async (req, res) => {
     const { blogId, postId } = req.params;
-
+    logInfo(`going to delete the blogger post ${postId} for user ${req.userId} `, path.basename(__filename), deleteBloggerPost)
+    if (!postId) {
+        return res.status(400).json("postId are required");
+    }
     try {
         const accessToken = req.user.accessToken; // Get the access token from the user session
         await axios.delete(`https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts/${postId}`, {
@@ -67,15 +87,18 @@ const deleteBloggerPost = async (req, res) => {
 
         res.status(204).send(); // Successfully deleted the post
     } catch (error) {
-        console.error(error);
+        logError(error, path.basename(__filename));
         res.status(500).send('Error deleting post');
     }
 }
-// Endpoint to fetch posts
+
 const getBloggerPost = async (req, res) => {
     const { blogId } = req.params;
+    logInfo(`going to fetch the blogger  for user ${req.userId} `, path.basename(__filename), deleteBloggerPost)
 
-    try {
+    if (!blogId) {
+        return res.status(400).json({ message: 'blogid are missing' });
+    } try {
         const accessToken = req.user.accessToken; // Get the access token from the user session
         const response = await axios.get(`https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts`, {
             headers: {
@@ -85,9 +108,9 @@ const getBloggerPost = async (req, res) => {
 
         res.status(200).json(response.data); // Return the fetched posts
     } catch (error) {
-        console.error(error);
+        logError(error, path.basename(__filename));
         res.status(500).send('Error fetching posts');
     }
 }
 
-export { createBlog, getBlOgId, getBloggerPost, deleteBloggerPost };
+export { createBlog, getBlogId, getBloggerPost, deleteBloggerPost };

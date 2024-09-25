@@ -42,15 +42,15 @@ model Token {
   user          User       @relation(fields: [userId], references: [id])
   platform      Platform   
   platformUserId String?    // Unique ID for the user's account on the platform
-  // Optional: Name or username of the account
+ 
   accessToken   String     // Access token for API requests
   refreshToken  String?    // Refresh token, if applicable
-    // Token expiration time
+ 
     
 
   mediumApi String?
 
-  postUrns    String[]   // Store multiple post URNs
+  postUrns    String[]   
 
   expiryTime  String?
   
@@ -75,7 +75,7 @@ model Feature {
   description String?
   plan        Plan  
   
-    // Enum to define which plan has this feature
+  
      userId String
       user            User           @relation(fields: [userId], references: [id])
 }
@@ -84,10 +84,10 @@ model Subscription {
   userId                String       // Foreign key reference
   user                  User       @relation(fields: [userId], references: [id])
   stripeSubscriptionId  String     // Stripe subscription ID
-  plan                  Plan       // Enum to define the subscription plan type
+  plan                  Plan       
   status                String     @default("ACTIVE") // Could be ACTIVE, CANCELED, etc.
   startDate             DateTime   @default(now())
-  endDate               DateTime?  // Nullable, used when the subscription ends
+  endDate               DateTime? 
   isActive              Boolean    @default(true)
   billingCycle          BillingCycle
   trialEndDate          DateTime?  // Nullable, used to track the end of the free trial
