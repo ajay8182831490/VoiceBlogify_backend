@@ -40,7 +40,7 @@ passport.use(new LocalStrategy(
         minNumbers: 1,
         minSymbols: 1
       })) {
-        return done(null, false, { message: 'Weak password' });
+        return done(null, false, { message: ' Weak password !Please enter correct password' });
       }
 
       if (user.googleId) {
@@ -48,7 +48,7 @@ passport.use(new LocalStrategy(
         return done(null, false, { message: 'User authenticated with Google. Please use Google login.' });
       }
 
-      // Check if the password matches
+
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
         logInfo('Password mismatch', path.basename(__filename), 'LocalStrategy');
@@ -63,41 +63,58 @@ passport.use(new LocalStrategy(
     }
   }
 ));
-
 passport.use(new GoogleStrategy({
   clientID: process.env.clientid,
   clientSecret: process.env.clientsecret,
   callbackURL: 'https://voiceblogify-backend.onrender.com/auth/google/callback',
-  scope: ['openid', 'profile', 'email'],
+  scope: ['openid', 'profile', 'email', 'https://www.googleapis.com/auth/blogger'],
 }, async (token, tokenSecret, profile, done) => {
   try {
     const { id: googleId, displayName: name, emails, photos } = profile;
     const email = emails?.[0]?.value;
-    logInfo(`Creating an account for user with profile id ${googleId}`, path.basename(__filename), 'GoogleStrategy');
 
-    let user = await prisma.user.findUnique({ where: { googleId } });
+    logInfo(`Authenticating user with profile id ${googleId} or ${email}`, path.basename(__filename), 'GoogleStrategy');
 
-    if (!user) {
-      const existingUserWithEmail = await prisma.user.findUnique({ where: { email } });
-      if (existingUserWithEmail) {
-        return done(null, false, { message: 'An account with this email already exists. Please log in using email and password.' });
-      }
+
+    let user = await prisma.user.findUnique({ where: { email } });
+
+    if (user) {
+
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          googleId,
+          name,
+          profilepic: photos?.[0]?.value,
+          userAccessToken: token,
+          isVerified: true
+        },
+      });
+    } else {
+
       user = await prisma.user.create({
         data: {
           googleId,
           name,
           email,
           profilepic: photos?.[0]?.value,
-          isVerified: true
-        }
+          isVerified: true,
+          userAccessToken: token,
+        },
       });
     }
+
+
     return done(null, user);
   } catch (err) {
     logError(err, path.basename(__filename));
     return done(err);
   }
 }));
+
+
+
+
 
 passport.serializeUser((user, done) => {
   done(null, user.id);

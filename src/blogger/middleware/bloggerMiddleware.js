@@ -7,18 +7,18 @@ const checkAuthBlogger = async (req, res, next) => {
 
         if (req.user.googleId) {
 
-            console.log('User is authenticated with Google.');
-            return next(); // Proceed to create post
+
+            return next();
         } else {
 
             console.log('User is authenticated with local email.');
-            req.session.returnTo = req.originalUrl; // Store the original URL
+            req.session.returnTo = req.originalUrl;
             return res.redirect('/auth/google');
         }
     } else {
 
-        req.session.returnTo = req.originalUrl; // Save the original URL
-        return res.redirect('/auth/google'); // Redirect to Google login
+        req.session.returnTo = req.originalUrl;
+        return res.redirect('/auth/google');
     }
 }
 export default checkAuthBlogger

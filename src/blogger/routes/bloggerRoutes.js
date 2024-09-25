@@ -1,8 +1,25 @@
 import express from 'express'
 
-import { ensureAuthenticated } from '../../middleware/authMiddleware'
+
 const router = express.Router();
 import rateLimit from 'express-rate-limit';
+
+const RequestRateLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 4,
+    handler: (req, res) => {
+        res.status(429).json({ message: "Too many request, please try again later." });
+    }
+})
+
+
+import checkAuthBlogger from '../middleware/bloggerMiddleware.js';
+import { createBlog, getBlogId, getBloggerPost, deleteBloggerPost } from '../controller/bloggerController.js';
+
+router.get('/blogger/getBlogId', checkAuthBlogger, getBlogId);
+router.post('/blogger/createPost', RequestRateLimiter, checkAuthBlogger, createBlog);
+router.delete('/blogger/posts/:blogId/:postId', RequestRateLimiter, checkAuthBlogger, deleteBloggerPost)
+router.get('/blogger/posts/:blogId', RequestRateLimiter, checkAuthBlogger, getBloggerPost)
 
 
 

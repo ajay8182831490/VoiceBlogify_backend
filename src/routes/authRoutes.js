@@ -4,18 +4,22 @@ import passport from '../config/passport.js';
 import rateLimit from 'express-rate-limit';
 import { ensureAuthenticated } from '../middleware/authMiddleware.js';
 import { registerUser, logoutUser, resetPassword, otpGeneration, checkAuth, passwordChange } from '../controller/authController.js';
-import { logInfo } from '../utils/logger.js';
+
 
 const router = express.Router();
 const otpRateLimiter = rateLimit({
-  windowMs: 60 * 1000,
+  windowMs: 2 * 60 * 1000,
   max: 3,
-  message: "Too many OTP requests from this IP, please try again after an hour"
+  handler: (req, res) => {
+    res.status(429).json({ message: "Too many otp request attempts, please try again later." });
+  }
 });
 const loginRateLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 4,
-  message: "Too many login attempts, please try again later."
+  handler: (req, res) => {
+    res.status(429).json({ message: "Too many login attempts, please try again later." });
+  }
 })
 
 
@@ -43,41 +47,6 @@ router.post('/login', loginRateLimiter, (req, res, next) => {
 
 
 
-/*router.get('/auth/google', loginRateLimiter, passport.authenticate('google', {
-  scope: ['profile', 'email', 'https://www.googleapis.com/auth/blogger']
-}));
-
-/*router.get('/auth/google/callback',
-  passport.authenticate('google', { failureRedirect: 'https://voiceblogify.netlify.app/login' }),
-  (req, res) => {
-
-
-    if (req.user) {
-      req.session.userId = req.user.id;
-    } else {
-      console.log('No user found, session will not be set');
-    }
-
-    res.redirect('https://voiceblogify.netlify.app/?login=success');
-  }
-)*/
-/*router.get('/auth/google/callback',
-  (req, res, next) => {
-    // Check if the user is logged in locally before authenticating with Google
-    if (req.isAuthenticated()) {
-
-      return next();
-    }
-    // User is not authenticated locally, proceed with Google authentication
-    passport.authenticate('google', { failureRedirect: '/https://voiceblogify.netlify.app/login' })(req, res, next);
-  },
-  (req, res) => {
-
-    const redirectUrl = req.session.returnTo || 'https://voiceblogify.netlify.app/?login=success';
-    delete req.session.returnTo;
-    res.redirect(redirectUrl);
-  }
-);*/
 
 router.get('/auth/google', (req, res, next) => {
 
@@ -90,21 +59,24 @@ router.get('/auth/google', (req, res, next) => {
 
 router.get('/auth/google/callback',
   (req, res, next) => {
-
     if (req.isAuthenticated()) {
-
       return next();
     }
-
-    passport.authenticate('google', { failureRedirect: '/login' })(req, res, next); // Corrected failureRedirect URL
+    passport.authenticate('google', { failureRedirect: '/login' })(req, res, next);
   },
   (req, res) => {
+
+
+    const accessToken = req.user.userAccessToken;
+
+    req.session.accessToken = accessToken;
 
     const redirectUrl = req.session.returnTo || 'https://voiceblogify.netlify.app/?login=success';
     delete req.session.returnTo;
     res.redirect(redirectUrl);
   }
 );
+
 
 
 router.post('/register', loginRateLimiter, registerUser);

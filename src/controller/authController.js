@@ -29,7 +29,7 @@ const validateEmail = (email) => {
 
 export const registerUser = async (req, res) => {
   let { email, password, name } = req.body;
-  logInfo(`Going to register a new account for user email ${email}`, path.basename(__filename));
+  logInfo(`Attempting to register a new account for user email: ${email}`, path.basename(__filename));
 
   try {
     // Sanitize inputs
@@ -39,6 +39,7 @@ export const registerUser = async (req, res) => {
 
     // Validate email
     if (!validator.isEmail(email)) {
+      logInfo(`Invalid email format: ${email}`, path.basename(__filename));
       return res.status(400).json({ message: 'Invalid email format' });
     }
 
@@ -50,27 +51,30 @@ export const registerUser = async (req, res) => {
       minNumbers: 1,
       minSymbols: 1
     })) {
-      return res.status(400).json({ message: 'Weak password ! Please enter a strong passsowrd' });
+      logInfo(`Weak password for email: ${email}`, path.basename(__filename));
+      return res.status(400).json({ message: 'Weak password! Please enter a strong password' });
     }
 
     // Validate name
     if (!name || name.length < 2 || !/^[A-Za-z\s'-]+$/.test(name)) {
+      logInfo(`Invalid name provided for email: ${email}`, path.basename(__filename));
       return res.status(400).json({ message: 'Invalid name. Must be at least 2 characters and contain only letters, spaces, hyphens, and apostrophes.' });
     }
 
-    // Check if the user already exists
+    // Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email: email }
     });
 
     if (existingUser) {
+      logInfo(`User already exists for email: ${email}`, path.basename(__filename));
       return res.status(400).json({ message: 'User already exists! Please try to login', authenticated: false });
     }
 
-    // Hash the password
+    // Hash password
     const hashedPassword = await hashPassword(password);
 
-    // Create the new user
+    // Create new user
     const user = await prisma.user.create({
       data: {
         email: email,
@@ -79,26 +83,27 @@ export const registerUser = async (req, res) => {
       }
     });
 
-    // Login the user
+    // Attempt to log in the user
     req.login(user, (err) => {
       if (err) {
         logError(err, path.basename(__filename));
         return res.status(500).json({ message: 'Login after signup failed' });
       }
 
+      logInfo(`User registered and logged in successfully: ${email}`, path.basename(__filename));
       return res.status(201).json({
         message: 'User registered and logged in successfully',
         authenticated: true,
-
-
+        name: user.name
       });
     });
 
   } catch (err) {
     logError(err, path.basename(__filename));
-    return res.status(500).json({ message: 'Erroroccur during registration' });
+    return res.status(500).json({ message: 'Error occurred during registration' });
   }
 };
+
 
 
 export const logoutUser = async (req, res) => {
@@ -307,19 +312,17 @@ export const otpGeneration = async (req, res) => {
 
 }
 export const checkAuth = async (req, res, next) => {
-
   if (req.isAuthenticated()) {
     return res.status(200).json({
       authenticated: true,
       name: req.user.name,
       id: req.user.id,
-      profilepic: req.user.profilepic,
+      profilepic: req.user.profilepic || null, // Return null if profilepic is not present
       isVerfied: req.user.isVerfied,
-
-
     });
   }
 
   return res.status(401).json({ authenticated: false });
 };
+
 
