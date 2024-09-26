@@ -47,7 +47,7 @@ const getPostById = async (req, res) => {
     try {
         const { postId } = req.params;
         const post = await req.mediumApi.get(`/posts/${postId}`);
-        res.status(200).json(post.data);
+        res.status(200).json({ message: "successfully fetch the post", data: post.data });
     } catch (error) {
         logError(error, path.basename(__filename));
         res.status(500).json({ message: "Error fetching post", error: error.message });

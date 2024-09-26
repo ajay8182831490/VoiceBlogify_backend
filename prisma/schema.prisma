@@ -1,8 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
   provider = "prisma-client-js"
@@ -29,8 +25,8 @@ model User {
   freeTrialStart DateTime?  
   role        UserRole  @default(USER)
   profilepic  String?
-  payments    Payment[]
-  features    Feature[]
+  payments    Payment[] 
+  features    Feature[]  
   blogCount   Int @default(0)
   isVerified  Boolean @default(false)
   post        Post[]
@@ -42,56 +38,13 @@ model Token {
   user          User       @relation(fields: [userId], references: [id])
   platform      Platform   
   platformUserId String?    // Unique ID for the user's account on the platform
- 
   accessToken   String     // Access token for API requests
   refreshToken  String?    // Refresh token, if applicable
- 
-    
-
   mediumApi String?
-
   postUrns    String[]   
-
   expiryTime  String?
   
-
   @@unique([userId, platform])
- 
- 
-}
-model Payment {
-  id              Int            @id @default(autoincrement())
-  userId          String           // Foreign key reference
-  user            User           @relation(fields: [userId], references: [id])
-  subscriptionId  String            // Foreign key reference
-  subscription    Subscription  @relation(fields: [subscriptionId], references: [id])
-  amount          Float
-  paymentDate     DateTime       @default(now())
-  paymentMethod   PaymentMethod
-}
-model Feature {
-  id          Int       @id @default(autoincrement())
-  name        String
-  description String?
-  plan        Plan  
-  
-  
-     userId String
-      user            User           @relation(fields: [userId], references: [id])
-}
-model Subscription {
-  id                    String        @id @default (uuid())
-  userId                String       // Foreign key reference
-  user                  User       @relation(fields: [userId], references: [id])
-  stripeSubscriptionId  String     // Stripe subscription ID
-  plan                  Plan       
-  status                String     @default("ACTIVE") // Could be ACTIVE, CANCELED, etc.
-  startDate             DateTime   @default(now())
-  endDate               DateTime? 
-  isActive              Boolean    @default(true)
-  billingCycle          BillingCycle
-  trialEndDate          DateTime?  // Nullable, used to track the end of the free trial
-  payments              Payment[]
 }
 
 model Post {
@@ -103,26 +56,24 @@ model Post {
   tags           String[]                               
   content        String                                  
   dateOfCreation DateTime? @default(now())    
-}    
-
-
-
+}
 
 enum Platform {
   LINKEDIN
   MEDIUM
+  BLOGGER
+}
 
-BLOGGER
-
-  // Add other platforms as needed
+enum UserRole {
+  USER
+  ADMIN
 }
 
 enum Plan {
   FREE
   BASIC
-  
   PREMIUM
-  BUISNESS
+  BUSINESS 
 }
 
 enum BillingCycle {
@@ -130,13 +81,45 @@ enum BillingCycle {
   YEARLY
 }
 
-enum PaymentMethod {
-  CREDIT_CARD
-  PAYPAL
- 
+model Subscription {
+  id                    String        @id @default(uuid())
+  userId                String        // Foreign key reference to User
+  user                  User          @relation(fields: [userId], references: [id])
+  plan                  Plan          // User's subscription plan
+  status                String        @default("ACTIVE") // Possible statuses: ACTIVE, CANCELED, etc.
+  startDate             DateTime      @default(now()) // Subscription start date
+  endDate               DateTime?     // Nullable: Subscription end date
+  isActive              Boolean       @default(true) // Indicates if the subscription is active
+  billingCycle          BillingCycle   // Defines the billing cycle (monthly/yearly)
+  trialEndDate          DateTime?     // Nullable: End date of free trial period
+  remainingPosts        Int           @default(0) // Remaining posts based on the subscription plan
+  nextDueDate          DateTime?     // Nullable: Next payment due date
+  invoiceLink           String?       // Link to the latest invoice
+  payments              Payment[]     // List of payments associated with the subscription
 }
 
-enum UserRole {
-  USER
-  ADMIN
+model Payment {
+  id              Int            @id @default(autoincrement())
+  userId          String         // Foreign key reference to User
+  user            User           @relation(fields: [userId], references: [id])
+  subscriptionId  String         // Foreign key reference to Subscription
+  subscription    Subscription   @relation(fields: [subscriptionId], references: [id])
+  amount          Float          // Amount paid in the transaction
+  paymentDate     DateTime       @default(now()) // Date of the payment transaction
+  paymentMethod   PaymentMethod  @default(PAYPAL) // Method used for the payment (only PayPal)
+  status          String         @default("COMPLETED") // Payment status: COMPLETED, PENDING, FAILED
+}
+
+enum PaymentMethod {
+  PAYPAL // Only PayPal as the payment method
+}
+
+model Feature {
+  id          Int       @id @default(autoincrement())
+  name        String    // Name of the feature
+  description String?   // Description of the feature
+  plan        Plan      // Plan associated with the feature
+  isEnabled   Boolean   @default(false) // Indicates if the feature is enabled for the given plan
+  userId      String    // Foreign key reference to User
+  user        User      @relation(fields: [userId], references: [id])
 }
