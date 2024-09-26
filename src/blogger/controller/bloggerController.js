@@ -99,7 +99,7 @@ const getBloggerPost = async (req, res) => {
     if (!blogId) {
         return res.status(400).json({ message: 'blogid are missing' });
     } try {
-        const accessToken = req.user.accessToken; // Get the access token from the user session
+        const accessToken = req.user.accessToken;
         const response = await axios.get(`https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts`, {
             headers: {
                 Authorization: `Bearer ${accessToken}`,

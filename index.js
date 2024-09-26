@@ -14,6 +14,7 @@ import connectMongoDBSession from 'connect-mongodb-session';
 import mongoose from 'mongoose';
 import mediumRoutes from './src/medium/routes/mediumRoutes.js'
 import bloggerRoutes from './src/blogger/routes/bloggerRoutes.js'
+import userRouter from './src/user/Routes/userRoutes.js'
 
 dotenv.config();
 
@@ -109,6 +110,7 @@ app.use(transcriptionRoutes);
 app.use(postOperation);
 
 app.use(bloggerRoutes)
+app.use(userRouter)
 
 
 app.use((err, req, res, next) => {
