@@ -21,7 +21,6 @@ export const linkedinMiddleware = async (req, res, next) => {
 
 
         if (existingToken) {
-            // Verify if the existing token is still valid by making a lightweight API call
             const response = await fetch("https://api.linkedin.com/v2/userinfo", {
                 headers: {
                     Authorization: `Bearer ${existingToken.accessToken}`,
@@ -34,7 +33,6 @@ export const linkedinMiddleware = async (req, res, next) => {
 
                 return next();
             } else {
-                // Token might be expired or invalid, fetch a new one
                 const authorizationCode = req.query.code;
                 const newAccessToken = await getAccessToken(authorizationCode);
                 req.linkedinToken = newAccessToken;

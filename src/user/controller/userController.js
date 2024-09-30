@@ -91,7 +91,7 @@ export const getUserProfile = async (req, res) => {
 
 
 
-
+        console.log(response)
 
 
         res.status(200).json(response);

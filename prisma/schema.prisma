@@ -76,7 +76,7 @@ model Subscription {
   nextDueDate       DateTime?
   invoiceLink       String?
   payments          Payment[]
-  features          PlanFeature[] // Relation to PlanFeature defined here
+  features          PlanFeature[] 
 }
 
 
@@ -87,7 +87,7 @@ model PlanFeature {
   description     String?
   limit           Int
   billingCycle    BillingCycle?
-  subscriptionId  String?        // Optional relationship to a Subscription if needed
+  subscriptionId  String?       
   subscription    Subscription?  @relation(fields: [subscriptionId], references: [id])
 }
 model Payment {
