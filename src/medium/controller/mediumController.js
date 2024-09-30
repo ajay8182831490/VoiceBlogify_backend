@@ -4,7 +4,7 @@ import { PrismaClient } from "@prisma/client";
 import axios from "axios";
 import { logError, logInfo } from "../../utils/logger.js";
 import path from "path";
-import FormData from "form-data"; // Ensure you import FormData
+import FormData from "form-data";
 
 const prisma = new PrismaClient();
 const __filename = fileURLToPath(import.meta.url);
@@ -121,12 +121,12 @@ const uploadPost = async (req, res) => {
     try {
         const { title, content, tag, publishStatus = 'public' } = req.body;
 
-        // Sanitize inputs
+
         const sanitizedTitle = purify.sanitize(title);
         const sanitizedContent = purify.sanitize(content);
         const sanitizedTags = Array.isArray(tag) ? tag.map(t => purify.sanitize(t)) : [purify.sanitize(tag)];
 
-        // Retrieve Medium API token
+
         const mediumToken = await prisma.token.findFirst({
             where: {
                 userId: req.userId,

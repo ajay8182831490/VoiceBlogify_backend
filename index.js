@@ -25,7 +25,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 
-const mongoUrl = process.env.MONGODB_URI || 'mongodb://localhost:27017/voiceblogify';
+const mongoUrl = process.env.MONGODB_URI
 mongoose.connect(mongoUrl)
   .then(() => {
     console.log('Connected to MongoDB');
@@ -53,9 +53,8 @@ const limiter = rateLimit({
   max: 100,
 });
 
-
 const corsOptions = {
-  origin: ['http://localhost:5173'],
+  origin: ['https://voiceblogify.netlify.app'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -64,45 +63,46 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 
+
 app.use(session({
-  secret: process.env.SECRET_SESSION_KEY || 'mySecret',
+  secret: process.env.SECRET_SESSION_KEY,
   resave: false,
   saveUninitialized: false,
   store: store,
   name: "voiceblogify",
   cookie: {
-    secure: false, // Set to false for local development
+    secure: true,
     httpOnly: true,
-    maxAge: 1000 * 60 * 60 * 24, // 1 day
-    sameSite: 'lax',
+    maxAge: 1000 * 60 * 60 * 24,
+    sameSite: 'none',
   },
-  proxy: false,
+  proxy: true,
 }));
 
 app.use(passport.initialize());
 app.use(passport.session());
-//app.use(limiter);
+app.use(limiter);
 
-// Health check route
+
 app.get('/keep-alive', (req, res) => {
   res.send('Alive!');
 });
 
-//CronJob for Local Environment
+
 const job = new CronJob('*/5 * * * *', async () => {
   try {
-    await fetch('http://localhost:4000/keep-alive', { timeout: 10000 });
+    await fetch('https://voiceblogify-backend.onrender.com/keep-alive', { timeout: 10000 });
   } catch (error) {
     console.error('Error keeping alive:', error);
   }
 });
-//job.start();
+job.start();
 
 // Routes
 app.use(authRoutes);
 app.use(linkdeinRoutes);
 app.use(mediumRoutes);
-app.use(redditRoutes); // Uncomment this for local Reddit routes testing
+//app.use(redditRoutes); 
 app.use(transcriptionRoutes);
 app.use(postOperation);
 app.use(bloggerRoutes);
@@ -115,6 +115,7 @@ app.use((err, req, res, next) => {
 });
 
 
+
 app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
+  console.log("Server is running on port", port);
 });

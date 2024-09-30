@@ -128,9 +128,7 @@ export const logoutUser = async (req, res) => {
 
       await req.session.destroy();
 
-      /* await prisma.session.delete({
-         where: { sid: req.session.id },
-       });*/
+
 
       res.clearCookie('connect.sid');
       res.send('Logged out successfully');

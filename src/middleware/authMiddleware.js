@@ -1,6 +1,6 @@
 
-import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
+
+
 export const ensureAuthenticated = async (req, res, next) => {
 
   if (req.isAuthenticated() && req.user) {

@@ -43,7 +43,7 @@ export const connect_to_linkedin = async (req, res, next) => {
         // });
 
 
-        res.redirect('http://localhost:5173/dashboard/linkedin');
+        res.redirect('https://voiceblogify.netlify.app/dashboard/linkedin');
 
     } catch (error) {
         logError(

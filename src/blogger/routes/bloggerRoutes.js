@@ -6,7 +6,7 @@ import rateLimit from 'express-rate-limit';
 import { ensureAuthenticated } from '../../middleware/authMiddleware.js';
 
 const RequestRateLimiter = rateLimit({
-    windowMs: 60 * 1000, // 1 minute
+    windowMs: 60 * 1000,
     max: 4,
     handler: (req, res) => {
         res.status(429).json({ message: "Too many request, please try again later." });

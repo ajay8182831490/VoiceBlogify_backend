@@ -14,7 +14,7 @@ const RequestRateLimiter = rateLimit({
     }
 })
 const upload = multer({
-    //dest: 'uploads/',
+
     fileFilter: (req, file, cb) => {
         const filetypes = /jpeg|jpg|png|gif/;
         const mimetype = filetypes.test(file.mimetype);

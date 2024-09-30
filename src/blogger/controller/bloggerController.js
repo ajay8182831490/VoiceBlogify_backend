@@ -90,14 +90,14 @@ const deleteBloggerPost = async (req, res) => {
         return res.status(400).json("postId are required");
     }
     try {
-        const accessToken = req.BloggerAccessToken // Get the access token from the user session
+        const accessToken = req.BloggerAccessToken
         await axios.delete(`https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts/${postId}`, {
             headers: {
                 Authorization: `Bearer ${accessToken}`,
             },
         });
 
-        res.status(204).send(); // Successfully deleted the post
+        res.status(204).send();
     } catch (error) {
         logError(error, path.basename(__filename));
         res.status(500).send('Error deleting post');
@@ -118,7 +118,7 @@ const getBloggerPost = async (req, res) => {
             },
         });
 
-        res.status(200).json(response.data); // Return the fetched posts
+        res.status(200).json(response.data);
     } catch (error) {
         logError(error, path.basename(__filename));
         res.status(500).send('Error fetching posts');
