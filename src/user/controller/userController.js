@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 import { PrismaClient } from "@prisma/client";
-import mediumUrl from "../../medium/mmiddleware/mediumMiddleware.js";
+
 
 const prisma = new PrismaClient();
 
@@ -55,6 +55,8 @@ export const getUserProfile = async (req, res) => {
             },
         });
 
+
+
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
@@ -91,7 +93,7 @@ export const getUserProfile = async (req, res) => {
 
 
 
-        console.log(response)
+        console.log("hey", response)
 
 
         res.status(200).json(response);
