@@ -27,6 +27,13 @@ export const getUserProfile = async (req, res) => {
 
 
     try {
+
+        const subscription = await prisma.subscription.findUnique({
+  where: { id: 'ddb23566-f524-478c-ae71-f4838f4ea983' },
+  select: { nextDueDate: true },
+});
+console.log(subscription);
+
         const user = await prisma.user.findUnique({
             where: { id: req.userId },
             include: {
