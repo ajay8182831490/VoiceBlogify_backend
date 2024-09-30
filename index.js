@@ -54,7 +54,7 @@ const limiter = rateLimit({
 });
 
 const corsOptions = {
-  origin: ['http://localhost:5173'],
+  origin: ['https://voiceblogify.netlify.app'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -71,10 +71,10 @@ app.use(session({
   store: store,
   name: "voiceblogify",
   cookie: {
-    secure: false,
+    secure: true,
     httpOnly: true,
     maxAge: 1000 * 60 * 60 * 24,
-    sameSite: 'lax',
+    sameSite: 'none',
   },
   proxy: false,
 }));
