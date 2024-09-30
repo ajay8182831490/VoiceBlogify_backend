@@ -18,23 +18,32 @@ const getBlogId = async (req, res) => {
     try {
 
 
-        const accessToken = req.user.accessToken;
+        const accessToken = req.BloggerAccessToken;
+
+
+
         const response = await axios.get('https://www.googleapis.com/blogger/v3/users/self/blogs', {
             headers: {
                 Authorization: `Bearer ${accessToken}`,
             },
         });
-
         const blogs = response.data.items;
 
         if (!blogs || blogs.length === 0) {
             return res.status(404).send('You need to create a blog before posting.');
         }
 
+        const extractedData = blogs.map(blog => ({
+            blogId: blog.id,
+            name: blog.name
+        }));
 
-        res.status(200).json({ blogs });
+
+
+        res.status(200).json(extractedData);
     } catch (error) {
-        logError(error, path.basename(__filename));
+
+        logError(error, path.basename(__filename), getBlogId);
         res.status(500).send('Error fetching blogs');
     }
 }
@@ -53,7 +62,10 @@ const createBlog = async (req, res) => {
         const cleantitle = purify.sanitize(title)
 
 
-        const accessToken = req.user.accessToken;
+
+
+
+        const accessToken = req.BloggerAccessToken;
         const response = await axios.post(`https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts`, {
             kind: 'blogger#post',
             title: cleantitle,
@@ -78,7 +90,7 @@ const deleteBloggerPost = async (req, res) => {
         return res.status(400).json("postId are required");
     }
     try {
-        const accessToken = req.user.accessToken; // Get the access token from the user session
+        const accessToken = req.BloggerAccessToken // Get the access token from the user session
         await axios.delete(`https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts/${postId}`, {
             headers: {
                 Authorization: `Bearer ${accessToken}`,
@@ -99,7 +111,7 @@ const getBloggerPost = async (req, res) => {
     if (!blogId) {
         return res.status(400).json({ message: 'blogid are missing' });
     } try {
-        const accessToken = req.user.accessToken; // Get the access token from the user session
+        const accessToken = req.BloggerAccessToken;
         const response = await axios.get(`https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts`, {
             headers: {
                 Authorization: `Bearer ${accessToken}`,

@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,113 +8,114 @@ datasource db {
 }
 
 model User {
-  id          String   @id @default(uuid())
-  email       String   @unique
-  password    String?  
-  googleId    String?  @unique
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  name        String?
-  expiryTime  DateTime?
-  otp         Int?
-  tokens      Token[]  
-  subscriptions Subscription[] 
-  userAccessToken String?  
-  freeTrialStart DateTime?  
-  role        UserRole  @default(USER)
-  profilepic  String?
-  payments    Payment[]
-  features    Feature[]
-  blogCount   Int @default(0)
-  isVerified  Boolean @default(false)
-  post        Post[]
+  id                String         @id @default(uuid())
+  email             String         @unique
+  password          String?
+  googleId          String?        @unique
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  name              String?
+  expiryTime        DateTime?
+  otp               Int?
+  tokens            Token[]
+  subscriptions     Subscription[]
+  userAccessToken   String?
+  freeTrialStart    DateTime?
+  role              UserRole       @default(USER)
+  profilepic        String?
+  payments          Payment[]
+  blogCount         Int            @default(0)
+  isVerified        Boolean        @default(false)
+  post              Post[]
+  RefreshToken String?
+
+  lastActiveDay   DateTime @default(now())
 }
 
 model Token {
-  id            Int        @id @default(autoincrement())
-  userId        String      
-  user          User       @relation(fields: [userId], references: [id])
-  platform      Platform   
-  platformUserId String?    // Unique ID for the user's account on the platform
- 
-  accessToken   String     // Access token for API requests
-  refreshToken  String?    // Refresh token, if applicable
- 
-    
+  id              Int          @id @default(autoincrement())
+  userId          String
+  user            User         @relation(fields: [userId], references: [id])
+  platform        Platform
+  platformUserId  String?      // Unique ID for the user's account on the platform
+  accessToken     String?       // Access token for API requests
+  refreshToken    String?      // Refresh token, if applicable
+  mediumApi       String?
+  postUrns        String[]
+  expiryTime      String?
+  mediumUserId    String?
 
-  mediumApi String?
-
-  postUrns    String[]   
-
-  expiryTime  String?
   
 
   @@unique([userId, platform])
- 
- 
-}
-model Payment {
-  id              Int            @id @default(autoincrement())
-  userId          String           // Foreign key reference
-  user            User           @relation(fields: [userId], references: [id])
-  subscriptionId  String            // Foreign key reference
-  subscription    Subscription  @relation(fields: [subscriptionId], references: [id])
-  amount          Float
-  paymentDate     DateTime       @default(now())
-  paymentMethod   PaymentMethod
-}
-model Feature {
-  id          Int       @id @default(autoincrement())
-  name        String
-  description String?
-  plan        Plan  
-  
-  
-     userId String
-      user            User           @relation(fields: [userId], references: [id])
-}
-model Subscription {
-  id                    String        @id @default (uuid())
-  userId                String       // Foreign key reference
-  user                  User       @relation(fields: [userId], references: [id])
-  stripeSubscriptionId  String     // Stripe subscription ID
-  plan                  Plan       
-  status                String     @default("ACTIVE") // Could be ACTIVE, CANCELED, etc.
-  startDate             DateTime   @default(now())
-  endDate               DateTime? 
-  isActive              Boolean    @default(true)
-  billingCycle          BillingCycle
-  trialEndDate          DateTime?  // Nullable, used to track the end of the free trial
-  payments              Payment[]
 }
 
 model Post {
-  id             Int       @id @default(autoincrement()) 
-  userId         String                                 
-  user           User      @relation(fields: [userId], references: [id]) 
-  title          String?                               
-  subtitle       String?                              
-  tags           String[]                               
-  content        String                                  
-  dateOfCreation DateTime? @default(now())    
-}    
+  id             Int          @id @default(autoincrement())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id])
+  title          String?
+  subtitle       String?
+  tags           String[]
+  content        String
+  dateOfCreation DateTime      @default(now())
+}
+
+model Subscription {
+  id                String        @id @default(uuid())
+  userId            String
+  user              User          @relation(fields: [userId], references: [id])
+  plan              Plan          @default(FREE)
+  status            String        @default("ACTIVE")
+  startDate         DateTime      @default(now())
+  endDate           DateTime?
+  isActive          Boolean       @default(true)
+  billingCycle      BillingCycle  @default(MONTHLY)
+  trialEndDate      DateTime?
+  remainingPosts    Int           @default(1)
+  nextDueDate       DateTime?
+  invoiceLink       String?
+  payments          Payment[]
+  features          PlanFeature[] // Relation to PlanFeature defined here
+}
 
 
-
+model PlanFeature {
+  id              Int            @id @default(autoincrement())
+  plan            Plan   
+  featureName     String
+  description     String?
+  limit           Int
+  billingCycle    BillingCycle?
+  subscriptionId  String?        // Optional relationship to a Subscription if needed
+  subscription    Subscription?  @relation(fields: [subscriptionId], references: [id])
+}
+model Payment {
+  id              Int            @id @default(autoincrement())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id])
+  subscriptionId  String
+  subscription    Subscription   @relation(fields: [subscriptionId], references: [id])
+  amount          Float
+  paymentDate     DateTime       @default(now()) // Date of the payment transaction
+  paymentMethod   PaymentMethod  @default(PAYPAL) // Method used for the payment (only PayPal)
+  status          String         @default("COMPLETED") // Payment status: COMPLETED, PENDING, FAILED
+}
 
 enum Platform {
   LINKEDIN
   MEDIUM
+  BLOGGER
+}
 
-BLOGGER
-
-  // Add other platforms as needed
+enum UserRole {
+  USER
+  ADMIN
 }
 
 enum Plan {
   FREE
   BASIC
-  
   PREMIUM
   BUISNESS
 }
@@ -131,12 +126,5 @@ enum BillingCycle {
 }
 
 enum PaymentMethod {
-  CREDIT_CARD
   PAYPAL
- 
-}
-
-enum UserRole {
-  USER
-  ADMIN
 }

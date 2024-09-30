@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Subscription" ALTER COLUMN "plan" SET DEFAULT 'FREE',
+ALTER COLUMN "billingCycle" SET DEFAULT 'MONTHLY',
+ALTER COLUMN "remainingPosts" SET DEFAULT 1;

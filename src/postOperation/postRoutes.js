@@ -14,10 +14,10 @@ const RequestRateLimiter = rateLimit({
 })
 
 router.get('/user/post/:postId', RequestRateLimiter, ensureAuthenticated, getUserPost);
-router.get('/user/postAll', RequestRateLimiter, ensureAuthenticated, getAllPost);
+router.get('/user/postAll', ensureAuthenticated, getAllPost);
 router.delete('/user/postDelete/:postId', RequestRateLimiter, ensureAuthenticated, deleteUserPost);
 router.patch('/user/postUpdate/:postId', RequestRateLimiter, ensureAuthenticated, updateUserPost);
-router.post('/user/savePost', RequestRateLimiter, ensureAuthenticated, saveUserPost);
+router.post('/user/savePost', ensureAuthenticated, saveUserPost);
 
 
 

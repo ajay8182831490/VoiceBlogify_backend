@@ -31,11 +31,11 @@ const validatePost = [
     body('content').notEmpty().withMessage('Content is required'),
     body('publishStatus').isIn(['public', 'draft', 'unlisted']).withMessage('Invalid publish status'),
 ];
-router.get('/url', mediumUrl);
+router.post('/medium/url', RequestRateLimiter, ensureAuthenticated, mediumUrl);
 
-router.delete('/medium/post/:postId', RequestRateLimiter, ensureAuthenticated, mediumUrl, deletePost);
-router.get('/medium/getPost/:postId', RequestRateLimiter, ensureAuthenticated, mediumUrl, getPostById);
-router.post('/medium/post', RequestRateLimiter, ensureAuthenticated, mediumUrl, validatePost, uploadPost);
-router.post('/medium/uploadImage', RequestRateLimiter, ensureAuthenticated, upload.single('image'), mediumUrl, uploadImage);
+router.delete('/medium/post/:postId', RequestRateLimiter, ensureAuthenticated, deletePost);
+router.get('/medium/getPost/:postId', RequestRateLimiter, ensureAuthenticated, getPostById);
+router.post('/medium/post', RequestRateLimiter, ensureAuthenticated, uploadPost);
+router.post('/medium/uploadImage', RequestRateLimiter, ensureAuthenticated, upload.single('image'), uploadImage);
 
 export default router

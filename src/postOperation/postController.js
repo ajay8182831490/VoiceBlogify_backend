@@ -36,7 +36,7 @@ const getAllPost = async (req, res) => {
             return res.status(404).json({ message: "No posts found for this user." });
         }
 
-        res.status(200).json(posts);
+        res.status(200).json({ posts: posts });
     } catch (error) {
         logError(error, path.basename(__filename));
         res.status(500).json({ message: "Internal server error" });
@@ -44,7 +44,7 @@ const getAllPost = async (req, res) => {
 }
 
 const getUserPost = async (req, res) => {
-    const { postId } = req.params;
+    const postId = parseInt(req.params.postId, 10);
     logInfo(`going to excess the user  post of user id ${req.userId} with postId ${postId}`, path.basename(__filename), getAllPost);
 
     try {
@@ -67,7 +67,7 @@ const getUserPost = async (req, res) => {
 
 }
 const deleteUserPost = async (req, res) => {
-    const { postId } = req.params;
+    const postId = parseInt(req.params.postId, 10);
     logInfo(`Going to delete the post of user id ${req.userId} with postId ${postId}`, path.basename(__filename), deleteUserPost);
 
     try {
@@ -92,30 +92,39 @@ const deleteUserPost = async (req, res) => {
 }
 
 const updateUserPost = async (req, res) => {
-    const { postId } = req.params;
+    const postId = parseInt(req.params.postId, 10);
     logInfo(`Going to update the user post of user id ${req.userId} with postId ${postId}`, path.basename(__filename), updateUserPost);
 
     try {
         let { title, subtitle, tag, content } = req.body;
 
 
+
+
+
+
+
+
         if (!title && !subtitle && !tag && !content) {
             return res.status(400).json({ message: "At least one field must be provided for update." });
         }
 
-        // Sanitize inputs
+
+
         title = title ? purify.sanitize(title) : undefined;
         subtitle = subtitle ? purify.sanitize(subtitle) : undefined;
-        tag = tag ? Array.isArray(tag) ? tag.map(t => purify.sanitize(t)) : [purify.sanitize(tag)] : undefined;
+        const tags = tag ? Array.isArray(tag) ? tag.map(t => purify.sanitize(t)) : [purify.sanitize(tag)] : undefined;
         content = content ? purify.sanitize(content) : undefined;
 
-        // Check if the post exists
-        const existingPost = await prisma.post.findUnique({
+
+        const existingPost = await prisma.post.findFirst({
             where: {
                 id: postId,
-                userId: req.userId // Ensure the post belongs to the user
+                userId: req.userId
             }
         });
+
+
 
         if (!existingPost) {
             return res.status(404).json({ message: "Post not found or you do not have permission to update it." });
@@ -124,18 +133,17 @@ const updateUserPost = async (req, res) => {
         const updateData = {
             ...(title && { title }),
             ...(subtitle && { subtitle }),
-            ...(tag && { tag }), // Assuming tag is an array
+            ...(tags && { tags }),
             ...(content && { content })
         };
 
-        // Update the post
         await prisma.post.update({
             where: {
-                id: postId,
-                userId: req.userId
+                id: postId
             },
             data: updateData
         });
+
 
         res.status(200).json({ message: "Post updated successfully." });
     } catch (error) {
@@ -143,6 +151,7 @@ const updateUserPost = async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 }
+
 
 const saveUserPost = async (req, res) => {
     logInfo(`Going to save the user post of user id ${req.userId}`, path.basename(__filename), saveUserPost);
@@ -158,14 +167,14 @@ const saveUserPost = async (req, res) => {
 
         title = title ? purify.sanitize(title) : undefined;
         subtitle = subtitle ? purify.sanitize(subtitle) : undefined;
-        tag = tag ? Array.isArray(tag) ? tag.map(t => purify.sanitize(t)) : [purify.sanitize(tag)] : undefined;
+        const tags = tag ? Array.isArray(tag) ? tag.map(t => purify.sanitize(t)) : [purify.sanitize(tag)] : undefined;
         content = content ? purify.sanitize(content) : undefined;
 
 
         const createData = {
             ...(title && { title }),
             ...(subtitle && { subtitle }),
-            ...(tag && { tag }),
+            ...(tags && { tags }),
             ...(content && { content })
         };
 

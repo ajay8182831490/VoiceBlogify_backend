@@ -2,7 +2,7 @@ import { logError } from "../../utils/logger.js";
 import axios from "axios";
 import path from "path";
 import { fileURLToPath } from "url";
-
+import { logInfo } from "../../utils/logger.js";
 const __filename = fileURLToPath(import.meta.url);
 import { PrismaClient } from "@prisma/client";
 import { linkedinMiddleware } from "../middleware/linkedinMiddleware.js";
@@ -10,7 +10,7 @@ import { linkedinMiddleware } from "../middleware/linkedinMiddleware.js";
 const prisma = new PrismaClient();
 
 
-export const connect_to_linkedin = async (req, res) => {
+export const connect_to_linkedin = async (req, res, next) => {
     logInfo(
         `Connecting user ${req.userId} with LinkedIn`,
         path.basename(__filename),
@@ -21,13 +21,30 @@ export const connect_to_linkedin = async (req, res) => {
         const accessToken = req.linkedinToken;
         const personId = req.personId;
 
-        res
-            .status(200)
-            .json({
-                message: "Successfully connected to LinkedIn",
-                personId,
-                accessToken,
-            });
+
+
+        // await prisma.token.upsert({
+        //     where: {
+        //         userId_platform: {
+        //             userId: req.userId,
+        //             platform: 'LINKEDIN'
+        //         }
+        //     },
+        //     update: {
+        //         accessToken: accessToken,
+        //         personId: personId
+        //     },
+        //     create: {
+        //         userId: req.userId,
+        //         platform: 'LINKEDIN',
+        //         accessToken: accessToken,
+
+        //     }
+        // });
+
+
+        res.redirect('http://localhost:5173/dashboard/linkedin');
+
     } catch (error) {
         logError(
             `Error connecting to LinkedIn: ${error.message}`,
@@ -79,12 +96,14 @@ export const to_linkedin = async (req, res) => {
 
 export const share_linkedin = async (req, res) => {
     // what we will do here here we will validate the
-
+    logInfo(' Going to share the post on  linkedin ', path.basename(__filename), share_linkedin)
     try {
         const { linkedinToken, personId } = req;
         const { description } = req.body;
         const images = req.files?.images || []; // If no images, fallback to an empty array
         const video = req.files?.video;
+
+
 
         if (images.length && video) {
             return res
@@ -127,30 +146,34 @@ export const share_linkedin = async (req, res) => {
             videoUrl
         );
 
-        const existingToken = await prisma.token.findUnique({
+        const existingToken = await prisma.token.findFirst({
             where: {
-                userId_platform_accessToken: {
-                    userId: req.userId,
-                    platform: "LINKEDIN",
-                    accessToken: req.accessToken,
-                },
+
+                userId: req.userId,
+                platform: "LINKEDIN",
+                accessToken: req.linkedinToken,
             },
+
             select: {
-                postUrn: true,
+                postUrns: true,
             },
         });
 
-        const existingPostUrns = existingToken?.postUrn || [];
+        const existingPostUrns = existingToken?.postUrns || [];
         const updatedPostUrns = [...existingPostUrns, postResponse.id];
 
         await prisma.token.update({
-            where: {
-                userId: req.userId,
-                platform: "LINKEDIN",
-                accessToken: req.accessToken,
+            where:
+
+            {
+                userId_platform: {
+                    userId: req.userId,
+                    platform: "LINKEDIN",
+                }
+
             },
             data: {
-                postUrn: updatedPostUrns,
+                postUrns: updatedPostUrns,
             },
         });
 

@@ -12,20 +12,20 @@ import rateLimit from 'express-rate-limit';
 import session from 'express-session';
 import connectMongoDBSession from 'connect-mongodb-session';
 import mongoose from 'mongoose';
-import mediumRoutes from './src/medium/routes/mediumRoutes.js'
-import bloggerRoutes from './src/blogger/routes/bloggerRoutes.js'
+import mediumRoutes from './src/medium/routes/mediumRoutes.js';
+import bloggerRoutes from './src/blogger/routes/bloggerRoutes.js';
+import userRouter from './src/user/Routes/userRoutes.js';
 
 dotenv.config();
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 4000;
 const app = express();
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 
-
-const mongoUrl = process.env.MONGODB_URI;
+const mongoUrl = process.env.MONGODB_URI || 'mongodb://localhost:27017/voiceblogify';
 mongoose.connect(mongoUrl)
   .then(() => {
     console.log('Connected to MongoDB');
@@ -34,28 +34,28 @@ mongoose.connect(mongoUrl)
     console.error('MongoDB connection error:', err);
   });
 
-
 const MongoDBStore = connectMongoDBSession(session);
 
 const store = new MongoDBStore({
   uri: mongoUrl,
-  collection: 'mySessions'
+  collection: 'mySessions',
 });
 
 store.on('error', (error) => {
   console.error('Session store error:', error);
 });
+
 app.set("trust proxy", 1);
-// Rate limiter
+
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
 });
 
 
-
 const corsOptions = {
-  origin: ['https://voiceblogify.netlify.app'],
+  origin: ['http://localhost:5173'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -64,51 +64,49 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 
-
 app.use(session({
-  secret: process.env.SECRET_SESSION_KEY,
+  secret: process.env.SECRET_SESSION_KEY || 'mySecret',
   resave: false,
   saveUninitialized: false,
   store: store,
   name: "voiceblogify",
   cookie: {
-    secure: true, // Set to true in production
+    secure: false, // Set to false for local development
     httpOnly: true,
     maxAge: 1000 * 60 * 60 * 24, // 1 day
-    sameSite: 'none',
+    sameSite: 'lax',
   },
-  proxy: true,
+  proxy: false,
 }));
-
 
 app.use(passport.initialize());
 app.use(passport.session());
-app.use(limiter)
+//app.use(limiter);
 
-
-
+// Health check route
 app.get('/keep-alive', (req, res) => {
   res.send('Alive!');
 });
+
+//CronJob for Local Environment
 const job = new CronJob('*/5 * * * *', async () => {
   try {
-    await fetch('https://voiceblogify-backend.onrender.com/keep-alive', { timeout: 10000 });
+    await fetch('http://localhost:4000/keep-alive', { timeout: 10000 });
   } catch (error) {
     console.error('Error keeping alive:', error);
   }
 });
-job.start();
+//job.start();
 
-
-
+// Routes
 app.use(authRoutes);
 app.use(linkdeinRoutes);
-app.use(mediumRoutes)
-//app.use(redditRoutes);
+app.use(mediumRoutes);
+app.use(redditRoutes); // Uncomment this for local Reddit routes testing
 app.use(transcriptionRoutes);
 app.use(postOperation);
-
-app.use(bloggerRoutes)
+app.use(bloggerRoutes);
+app.use(userRouter);
 
 
 app.use((err, req, res, next) => {
@@ -118,5 +116,5 @@ app.use((err, req, res, next) => {
 
 
 app.listen(port, () => {
-  console.log("Server is running on port", port);
+  console.log(`Server is running on http://localhost:${port}`);
 });
