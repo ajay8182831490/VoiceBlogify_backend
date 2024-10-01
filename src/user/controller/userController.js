@@ -103,7 +103,7 @@ console.log(subscription);
         console.log("hey", response)*/
 
 
-        res.status(200).json("done);
+        res.status(200).json("done");
     } catch (error) {
         logError(error, path.basename(__filename));
         res.status(500).json("Internal server error");
