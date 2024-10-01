@@ -30,7 +30,7 @@ export const getUserProfile = async (req, res) => {
 
         const subscription = await prisma.subscription.findUnique({
   where: { id: req.userId },
-  select: { nextDueDate: true },
+  
 });
 console.log(subscription);
 
