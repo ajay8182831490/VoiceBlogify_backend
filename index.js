@@ -91,10 +91,10 @@ app.get('/keep-alive', (req, res) => {
 
 const job = new CronJob('*/5 * * * *', async () => {
   try {
-   await fetch('https://voiceblogify-backend.onrender.com/keep-alive', { timeout: 10000 });
- } catch (error) {
-   console.error('Error keeping alive:', error);
- }
+    await fetch('https://voiceblogify-backend.onrender.com/keep-alive', { timeout: 10000 });
+  } catch (error) {
+    console.error('Error keeping alive:', error);
+  }
 });
 job.start();
 
