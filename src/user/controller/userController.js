@@ -27,7 +27,14 @@ export const getUserProfile = async (req, res) => {
 
 
     try {
-        const user = await prisma.user.findUnique({
+
+        const subscription = await prisma.subscription.findUnique({
+  where: { id: req.userId },
+  
+});
+console.log(subscription);
+
+       /* const user = await prisma.user.findUnique({
             where: { id: req.userId },
             include: {
                 subscriptions: {
@@ -93,10 +100,10 @@ export const getUserProfile = async (req, res) => {
 
 
 
-        console.log("hey", response)
+        console.log("hey", response)*/
 
 
-        res.status(200).json(response);
+        res.status(200).json("done");
     } catch (error) {
         logError(error, path.basename(__filename));
         res.status(500).json("Internal server error");

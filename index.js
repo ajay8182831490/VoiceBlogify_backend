@@ -54,7 +54,8 @@ const limiter = rateLimit({
 });
 
 const corsOptions = {
-  origin: ['https://voiceblogify.netlify.app'],
+  origin: ['https://www.voiceblogify.in',
+    'https://voiceblogify.netlify.app'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -76,12 +77,11 @@ app.use(session({
     maxAge: 1000 * 60 * 60 * 24,
     sameSite: 'none',
   },
-  proxy: false,
+  proxy: true,
 }));
-
 app.use(passport.initialize());
 app.use(passport.session());
-app.use(limiter);
+//app.use(limiter);
 
 
 app.get('/keep-alive', (req, res) => {
@@ -89,14 +89,14 @@ app.get('/keep-alive', (req, res) => {
 });
 
 
-// const job = new CronJob('*/5 * * * *', async () => {
-//   try {
-//     await fetch('https://voiceblogify-backend.onrender.com/keep-alive', { timeout: 10000 });
-//   } catch (error) {
-//     console.error('Error keeping alive:', error);
-//   }
-// });
-// job.start();
+const job = new CronJob('*/5 * * * *', async () => {
+  try {
+   await fetch('https://voiceblogify-backend.onrender.com/keep-alive', { timeout: 10000 });
+ } catch (error) {
+   console.error('Error keeping alive:', error);
+ }
+});
+job.start();
 
 // Routes
 app.use(authRoutes);
