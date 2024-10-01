@@ -78,10 +78,9 @@ app.use(session({
   },
   proxy: true,
 }));
-
 app.use(passport.initialize());
 app.use(passport.session());
-app.use(limiter);
+//app.use(limiter);
 
 
 app.get('/keep-alive', (req, res) => {
