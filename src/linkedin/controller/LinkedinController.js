@@ -23,24 +23,6 @@ export const connect_to_linkedin = async (req, res, next) => {
 
 
 
-        // await prisma.token.upsert({
-        //     where: {
-        //         userId_platform: {
-        //             userId: req.userId,
-        //             platform: 'LINKEDIN'
-        //         }
-        //     },
-        //     update: {
-        //         accessToken: accessToken,
-        //         personId: personId
-        //     },
-        //     create: {
-        //         userId: req.userId,
-        //         platform: 'LINKEDIN',
-        //         accessToken: accessToken,
-
-        //     }
-        // });
 
 
         res.redirect('https://voiceblogify.netlify.app/dashboard/linkedin');
