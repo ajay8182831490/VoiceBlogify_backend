@@ -29,10 +29,31 @@ const cookiesFilePath = path.join(__dirname, '../../cookies.txt');
 
 
 const downloadAudio = async (url, outputFilePath) => {
+    console.log('Attempting to download audio from URL:', url); // Log the URL
 
-    const command = `yt-dlp --cookies "${cookiesFilePath}" -f bestaudio -o "${outputFilePath}" ${url}`;
+    const ytDlpCommand = [
+        'yt-dlp',
+        '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.3',
+        '-f', 'bestaudio',
+        '-o', outputFilePath,
+        '--restrict-filenames',
+        '--no-mtime',
+        '-v', // Verbose output for debugging
+        url // URL should be the last argument
+    ];
+
     try {
-        await execPromise(command);
+        const { stdout, stderr } = await execPromise(ytDlpCommand[0], ytDlpCommand.slice(1));
+
+        // Log stdout and stderr for debugging
+        console.log('yt-dlp stdout:', stdout);
+        console.error('yt-dlp stderr:', stderr); // Log stderr for debugging
+
+        if (stderr) {
+            throw new Error('yt-dlp stderr output indicates a problem: ' + stderr);
+        }
+
+        return stdout; // Return the standard output
     } catch (error) {
         console.error('Error in downloadAudio:', error.message); // Log error details
         throw new Error('Failed to download audio'); // Rethrow a simplified error message
@@ -53,7 +74,7 @@ const audioSize = async (audiofile) => {
     });
 };
 
-const urlTranscription = async (req, res) => {
+export const urlTranscription = async (req, res) => {
     const { userId } = req;
     const { url } = req.body;
 
@@ -137,7 +158,7 @@ const urlTranscription = async (req, res) => {
     }
 };
 
-const recordTranscription = async (req, res) => {
+export const recordTranscription = async (req, res) => {
     const { userId } = req
     logInfo(`Going to audio file transcripte to the text for the user ${userId}`, path.basename(__filename), recordTranscription);
     try {
@@ -160,7 +181,7 @@ const recordTranscription = async (req, res) => {
     }
 }
 
-export = { recordTranscription, urlTranscription }
+
 
 
 
