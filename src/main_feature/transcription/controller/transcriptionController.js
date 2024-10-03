@@ -26,6 +26,7 @@ const audioSizeLimits = {
 
 
 const cookiesFilePath = path.join(__dirname, '../../cookies.txt');
+console.log(cookiesFilePath);
 
 const execPromise = (command) => {
     return new Promise((resolve, reject) => {
@@ -45,8 +46,9 @@ const downloadAudio = async (url, outputFilePath) => {
 
     const ytDlpCommand = [
         'yt-dlp',
+        '--cookies', cookiesFilePath,
         '--user-agent',
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.3',
+        '"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.3"',
         '-f', 'bestaudio',
         '-o', outputFilePath,
         '--restrict-filenames',
