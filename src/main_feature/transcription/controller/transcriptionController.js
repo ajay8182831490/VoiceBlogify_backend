@@ -30,8 +30,7 @@ const cookiesFilePath = path.join(__dirname, '../../cookies.txt');
 const downloadAudio = async (url, outputFilePath) => {
   const ytDlpCommand = [
     'yt-dlp',
-    '--cookies', cookiesFilePath,
-    '--user-agent', '"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.3"',
+    '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.3',
     '-f', 'bestaudio',
     '-o', outputFilePath,
     '--restrict-filenames',
@@ -40,19 +39,18 @@ const downloadAudio = async (url, outputFilePath) => {
   ];
 
   try {
-    const command = ytDlpCommand.join(' ');
-
-    const { stdout, stderr } = await execPromise(command);
+    const { stdout, stderr } = await execPromise(ytDlpCommand);
     if (stderr) {
-      logError(stderr, path.basename(__filename), downloadAudio);
+      console.error('yt-dlp stderr:', stderr); // Log stderr for debugging
       throw new Error('Failed to download audio');
     }
     return stdout;
   } catch (error) {
-    logError(error, path.basename(__filename), downloadAudio);
+    console.error('Error in downloadAudio:', error); // Log error details
     throw new Error('Failed to download audio');
   }
 };
+
 
 
 
