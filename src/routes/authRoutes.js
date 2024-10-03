@@ -24,7 +24,7 @@ const loginRateLimiter = rateLimit({
 
 
 
-router.post('/login', loginRateLimiter, (req, res, next) => {
+router.post('/login', (req, res, next) => {
 
   passport.authenticate('local', (err, user, info) => {
     if (err) return next(err);
@@ -71,7 +71,8 @@ router.get('/auth/google/callback',
 
     req.session.accessToken = accessToken;
 
-    const redirectUrl = req.session.returnTo || 'https://voiceblogify.netlify.app/?login=success';
+    const redirectUrl = req.session.returnTo || 'http://localhost:5173/?login=success';
+
     delete req.session.returnTo;
     res.redirect(redirectUrl);
   }

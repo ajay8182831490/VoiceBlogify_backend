@@ -29,7 +29,7 @@ passport.use(new LocalStrategy(
 
       if (!user) {
         logInfo(`No user found with email: ${email}`, path.basename(__filename), 'LocalStrategy');
-        return done(null, false, { message: 'Enter a valid email id.' });
+        return done(null, false, { message: 'Enter a correct email id.' });
       }
 
 
@@ -66,9 +66,10 @@ passport.use(new LocalStrategy(
 passport.use(new GoogleStrategy({
   clientID: process.env.clientid,
   clientSecret: process.env.clientsecret,
-  callbackURL: 'https://voiceblogify-backend.onrender.com/auth/google/callback',
+  //callbackURL: 'https://voiceblogify-backend.onrender.com/auth/google/callback',
+  callbackURL: 'http://localhost:4000/auth/google/callback',
   scope: ['openid', 'profile', 'email', 'https://www.googleapis.com/auth/blogger'],
-}, async (token, tokenSecret, profile, done) => {
+}, async (token, refreshToken, profile, done) => {
   try {
     const { id: googleId, displayName: name, emails, photos } = profile;
     const email = emails?.[0]?.value;
@@ -87,7 +88,8 @@ passport.use(new GoogleStrategy({
           name,
           profilepic: photos?.[0]?.value,
           userAccessToken: token,
-          isVerified: true
+          isVerified: true,
+          RefreshToken: refreshToken
         },
       });
     } else {
@@ -100,10 +102,29 @@ passport.use(new GoogleStrategy({
           profilepic: photos?.[0]?.value,
           isVerified: true,
           userAccessToken: token,
+          RefreshToken: refreshToken
+        },
+      });
+
+
+      await prisma.subscription.create({
+        data: {
+          userId: user.id,
+          plan: 'FREE',
+          status: 'ACTIVE',
+          isActive: true,
+          startDate: new Date(),
+          remainingPosts: 1,
+          features: {
+            create: [
+              { featureName: 'Total Blogs Allowed', limit: 1, plan: 'FREE' },
+              { featureName: 'Audio Recording Length', limit: 10, plan: 'FREE' },
+              { featureName: 'Audio Recording uploading file size', limit: 20, plan: 'FREE' },
+            ],
+          },
         },
       });
     }
-
 
     return done(null, user);
   } catch (err) {
@@ -111,7 +132,6 @@ passport.use(new GoogleStrategy({
     return done(err);
   }
 }));
-
 
 
 

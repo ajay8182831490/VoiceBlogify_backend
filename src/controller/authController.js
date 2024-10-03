@@ -32,18 +32,15 @@ export const registerUser = async (req, res) => {
   logInfo(`Attempting to register a new account for user email: ${email}`, path.basename(__filename));
 
   try {
-    // Sanitize inputs
     name = sanitizeHtml(validator.trim(name));
     email = validator.normalizeEmail(email);
     password = validator.trim(password);
 
-    // Validate email
     if (!validator.isEmail(email)) {
       logInfo(`Invalid email format: ${email}`, path.basename(__filename));
       return res.status(400).json({ message: 'Invalid email format' });
     }
 
-    // Validate password
     if (!validator.isStrongPassword(password, {
       minLength: 6,
       minLowercase: 1,
@@ -55,13 +52,11 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({ message: 'Weak password! Please enter a strong password' });
     }
 
-    // Validate name
     if (!name || name.length < 2 || !/^[A-Za-z\s'-]+$/.test(name)) {
       logInfo(`Invalid name provided for email: ${email}`, path.basename(__filename));
       return res.status(400).json({ message: 'Invalid name. Must be at least 2 characters and contain only letters, spaces, hyphens, and apostrophes.' });
     }
 
-    // Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email: email }
     });
@@ -71,10 +66,9 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({ message: 'User already exists! Please try to login', authenticated: false });
     }
 
-    // Hash password
     const hashedPassword = await hashPassword(password);
 
-    // Create new user
+
     const user = await prisma.user.create({
       data: {
         email: email,
@@ -83,7 +77,24 @@ export const registerUser = async (req, res) => {
       }
     });
 
-    // Attempt to log in the user
+    await prisma.subscription.create({
+      data: {
+        userId: user.id,
+        plan: 'FREE',
+        status: 'ACTIVE',
+        isActive: true,
+        startDate: new Date(),
+        remainingPosts: 1,
+        features: {
+          create: [
+            { featureName: 'Total Blogs Allowed', limit: 1, plan: 'FREE' },
+            { featureName: 'Audio Recording Length', limit: 10, plan: 'FREE' },
+            { featureName: 'Audio Recording uploading file size', limit: 20, plan: 'FREE' },
+          ],
+        },
+      }
+    });
+
     req.login(user, (err) => {
       if (err) {
         logError(err, path.basename(__filename));
@@ -106,6 +117,7 @@ export const registerUser = async (req, res) => {
 
 
 
+
 export const logoutUser = async (req, res) => {
   req.logout(async (err) => {
     if (err) {
@@ -116,9 +128,7 @@ export const logoutUser = async (req, res) => {
 
       await req.session.destroy();
 
-      /* await prisma.session.delete({
-         where: { sid: req.session.id },
-       });*/
+
 
       res.clearCookie('connect.sid');
       res.send('Logged out successfully');
@@ -317,8 +327,9 @@ export const checkAuth = async (req, res, next) => {
       authenticated: true,
       name: req.user.name,
       id: req.user.id,
-      profilepic: req.user.profilepic || null, // Return null if profilepic is not present
-      isVerfied: req.user.isVerfied,
+      profilepic: req.user.profilepic || null,
+      isVerified: req.user.isVerified,
+      isPaid: req.user.isPaid || false
     });
   }
 

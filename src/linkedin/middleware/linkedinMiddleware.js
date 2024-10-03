@@ -1,10 +1,15 @@
 import { PrismaClient } from "@prisma/client";
-import { logError } from "../../utils/logger.js";
+import { logError, logInfo } from "../../utils/logger.js";
 import { getAccessToken } from "../controller/LinkedinController.js";
+import path from 'path'
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
 
 const prisma = new PrismaClient();
 
 export const linkedinMiddleware = async (req, res, next) => {
+    logInfo(`going to connect the user with linkedin ${req.userId}`, path.basename(__filename), linkedinMiddleware)
     try {
         const existingToken = await prisma.token.findFirst({
             where: {
@@ -13,8 +18,9 @@ export const linkedinMiddleware = async (req, res, next) => {
             },
         });
 
+
+
         if (existingToken) {
-            // Verify if the existing token is still valid by making a lightweight API call
             const response = await fetch("https://api.linkedin.com/v2/userinfo", {
                 headers: {
                     Authorization: `Bearer ${existingToken.accessToken}`,
@@ -27,7 +33,6 @@ export const linkedinMiddleware = async (req, res, next) => {
 
                 return next();
             } else {
-                // Token might be expired or invalid, fetch a new one
                 const authorizationCode = req.query.code;
                 const newAccessToken = await getAccessToken(authorizationCode);
                 req.linkedinToken = newAccessToken;
@@ -64,8 +69,14 @@ export const linkedinMiddleware = async (req, res, next) => {
                 }
             }
         } else {
-            // No existing token, fetch a new one
+
+
             const authorizationCode = req.query.code;
+
+            if (!authorizationCode) {
+                return res.redirect('/auth/linkedin'); // Redirect to login if no authorization code
+            }
+
             const newAccessToken = await getAccessToken(authorizationCode);
             req.linkedinToken = newAccessToken;
 
