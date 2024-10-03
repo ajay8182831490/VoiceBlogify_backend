@@ -42,23 +42,29 @@ const downloadAudio = async (url, outputFilePath) => {
         url // URL should be the last argument
     ];
 
+    // Construct the full command string
+    const commandString = ytDlpCommand.join(' ');
+    console.log(`Executing command: ${ytDlpCommand.join(' ')}`);
+
     try {
-        const { stdout, stderr } = await execPromise(ytDlpCommand[0], ytDlpCommand.slice(1));
+        const { stdout, stderr } = await execPromise(commandString); // Pass the command string directly
 
         // Log stdout and stderr for debugging
         console.log('yt-dlp stdout:', stdout);
-        console.error('yt-dlp stderr:', stderr); // Log stderr for debugging
-
         if (stderr) {
-            throw new Error('yt-dlp stderr output indicates a problem: ' + stderr);
+            console.error('yt-dlp stderr:', stderr); // Log stderr for debugging
+            throw new Error(`yt-dlp stderr output indicates a problem: ${stderr}`);
         }
 
         return stdout; // Return the standard output
     } catch (error) {
+        // Improved error handling
         console.error('Error in downloadAudio:', error.message); // Log error details
+        console.error('Full command executed:', commandString); // Log the full command for debugging
         throw new Error('Failed to download audio'); // Rethrow a simplified error message
     }
 };
+
 
 const audioSize = async (audiofile) => {
     return new Promise((resolve, reject) => {
