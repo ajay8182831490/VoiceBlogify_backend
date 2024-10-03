@@ -31,7 +31,7 @@ const downloadAudio = async (url, outputFilePath) => {
   const ytDlpCommand = [
     'yt-dlp',
     '--cookies', cookiesFilePath,
-    '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.3',
+    '--user-agent', '"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.3"',
     '-f', 'bestaudio',
     '-o', outputFilePath,
     '--restrict-filenames',
@@ -40,7 +40,7 @@ const downloadAudio = async (url, outputFilePath) => {
   ];
 
   try {
-       const command = ytDlpCommand.join(' ');
+    const command = ytDlpCommand.join(' ');
 
     const { stdout, stderr } = await execPromise(command);
     if (stderr) {
@@ -53,6 +53,8 @@ const downloadAudio = async (url, outputFilePath) => {
     throw new Error('Failed to download audio');
   }
 };
+
+
 
 const audioSize = async (audiofile) => {
     return new Promise((resolve, reject) => {
