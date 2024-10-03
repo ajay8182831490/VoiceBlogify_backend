@@ -3,7 +3,7 @@ import util from 'util';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { logInfo, logError } from '../../../utils/logger.js';
-const execPromise = util.promisify(exec);
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -27,13 +27,26 @@ const audioSizeLimits = {
 
 const cookiesFilePath = path.join(__dirname, '../../cookies.txt');
 
+const execPromise = (command) => {
+    return new Promise((resolve, reject) => {
+        exec(command, (error, stdout, stderr) => {
+            if (error) {
+                reject(new Error(`Command failed: ${stderr}`));
+            }
+            resolve({ stdout, stderr });
+        });
+    });
+};
+
+
 
 const downloadAudio = async (url, outputFilePath) => {
     console.log('Attempting to download audio from URL:', url); // Log the URL
 
     const ytDlpCommand = [
         'yt-dlp',
-        '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.3',
+        '--user-agent',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.3',
         '-f', 'bestaudio',
         '-o', outputFilePath,
         '--restrict-filenames',
@@ -44,9 +57,9 @@ const downloadAudio = async (url, outputFilePath) => {
 
     // Construct the full command string
     const commandString = ytDlpCommand.join(' ');
-    console.log(`Executing command: ${ytDlpCommand.join(' ')}`);
 
     try {
+        console.log('Executing command:', commandString); // Log the command being executed
         const { stdout, stderr } = await execPromise(commandString); // Pass the command string directly
 
         // Log stdout and stderr for debugging
