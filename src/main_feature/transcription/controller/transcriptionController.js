@@ -79,7 +79,7 @@ const audioSize = async (audiofile) => {
     });
 };
 
-export const urlTranscription = async (req, res) => {
+ const urlTranscription = async (req, res) => {
     const { userId } = req;
     const { url } = req.body;
 
@@ -163,8 +163,7 @@ export const urlTranscription = async (req, res) => {
     }
 };
 
-
-export const recordTranscription = async (req, res) => {
+ const recordTranscription = async (req, res) => {
     const { userId } = req
     logInfo(`Going to audio file transcripte to the text for the user ${userId}`, path.basename(__filename), recordTranscription);
     try {
@@ -186,6 +185,9 @@ export const recordTranscription = async (req, res) => {
         res.status(500).json({ messagge: "internal server error" })
     }
 }
+
+
+    module.exports={recordTranscription,urlTranscription}
 
 
 
