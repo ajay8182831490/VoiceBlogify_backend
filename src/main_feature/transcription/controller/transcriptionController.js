@@ -40,7 +40,9 @@ const downloadAudio = async (url, outputFilePath) => {
   ];
 
   try {
-    const { stdout, stderr } = await execPromise(ytDlpCommand);
+       const command = ytDlpCommand.join(' ');
+
+    const { stdout, stderr } = await execPromise(command);
     if (stderr) {
       logError(stderr, path.basename(__filename), downloadAudio);
       throw new Error('Failed to download audio');
