@@ -25,8 +25,11 @@ const audioSizeLimits = {
 };
 
 
+const cookiesFilePath = path.join(__dirname, '../../cookies.txt');
+
 const downloadAudio = async (url, outputFilePath) => {
-    const command = `yt-dlp -f bestaudio -o "${outputFilePath}" ${url}`;
+
+    const command = `yt-dlp --cookies "${cookiesFilePath}" -f bestaudio -o "${outputFilePath}" ${url}`;
     try {
         await execPromise(command);
     } catch (error) {
@@ -42,14 +45,12 @@ const audioSize = async (audiofile) => {
                 logError(err, path.basename(__filename), audioSize);
                 return reject(new Error("Error retrieving audio duration"));
             }
-
             const durationInSeconds = metadata.format.duration;
             const durationInMinutes = durationInSeconds / 60;
             resolve(durationInMinutes);
         });
     });
 };
-
 
 export const urlTranscription = async (req, res) => {
     const { userId } = req;
@@ -63,25 +64,16 @@ export const urlTranscription = async (req, res) => {
     let tempAudioPath;
 
     try {
-
         const youtubePattern = /^(https?:\/\/)?(www\.)?(youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/)|youtu\.be\/)[a-zA-Z0-9_-]{11}(\?[^\s]*)?$/;
         if (!youtubePattern.test(url)) {
             return res.status(400).json({ message: "Invalid YouTube URL" });
-
-
-
         }
-
 
         const user = await prisma.user.findUnique({
             where: { id: userId },
             include: {
                 subscriptions: {
-                    where: {
-                        status: "ACTIVE",
-
-                    },
-
+                    where: { status: "ACTIVE" },
                     select: {
                         plan: true,
                         remainingPosts: true,
@@ -94,8 +86,6 @@ export const urlTranscription = async (req, res) => {
             }
         });
 
-
-
         // Check if the user has an active subscription
         if (!user || user.subscriptions.length === 0) {
             return res.status(403).json({ message: "No active subscription found." });
@@ -107,37 +97,22 @@ export const urlTranscription = async (req, res) => {
         if (activeSubscription.remainingPosts <= 0) {
             return res.status(403).json({ message: "No remaining posts available for this subscription." });
         }
+
         tempAudioPath = path.join(__dirname, `${userId}_temp_audio.mp3`);
 
-
-
-        await downloadAudio(url, tempAudioPath);
+        await downloadAudio(url, tempAudioPath); // Call the download function
 
         const durationInMinutes = await audioSize(tempAudioPath);
-
-
-
-
-
         const allowedDuration = audioSizeLimits[activeSubscription.plan];
-
 
         if (durationInMinutes > allowedDuration) {
             return res.status(400).json({ message: `Audio exceeds allowed duration of ${allowedDuration} minutes for your plan.` });
         }
 
-
-
         const text = await speechToText(tempAudioPath);
         console.log(text);
 
-
-
-
-
-
-
-
+        // Clean up the temporary audio file
         fs.unlink(tempAudioPath, (err) => {
             if (err) {
                 logError(err, path.basename(__filename), urlTranscription);
@@ -148,6 +123,7 @@ export const urlTranscription = async (req, res) => {
 
         res.status(200).json({ message: 'Audio downloaded successfully', path: tempAudioPath });
     } catch (error) {
+        // Ensure the temporary audio file is deleted on error
         fs.unlink(tempAudioPath, (err) => {
             if (err) {
                 logError(err, path.basename(__filename), urlTranscription);
@@ -159,7 +135,6 @@ export const urlTranscription = async (req, res) => {
         res.status(500).json({ message: "Internal server error" }); // Send a generic error message to the user
     }
 };
-
 
 
 export const recordTranscription = async (req, res) => {
