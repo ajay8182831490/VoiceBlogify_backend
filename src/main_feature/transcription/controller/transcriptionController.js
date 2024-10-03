@@ -186,8 +186,7 @@ const audioSize = async (audiofile) => {
     }
 }
 
-
-    module.exports={recordTranscription,urlTranscription}
+ export={recordTranscription,urlTranscription}
 
 
 
