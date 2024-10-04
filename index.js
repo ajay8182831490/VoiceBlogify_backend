@@ -16,6 +16,8 @@ import mediumRoutes from './src/medium/routes/mediumRoutes.js';
 import bloggerRoutes from './src/blogger/routes/bloggerRoutes.js';
 import userRouter from './src/user/Routes/userRoutes.js';
 
+import paypalpayment from './src/subscription/payment/controller/PaymentController.js'
+
 dotenv.config();
 
 const port = process.env.PORT || 4000;
@@ -96,7 +98,7 @@ const job = new CronJob('*/5 * * * *', async () => {
     console.error('Error keeping alive:', error);
   }
 });
-//job.start();
+job.start();
 
 // Routes
 app.use(authRoutes);
@@ -107,6 +109,7 @@ app.use(transcriptionRoutes);
 app.use(postOperation);
 app.use(bloggerRoutes);
 app.use(userRouter);
+app.use(paypalpayment)
 
 
 app.use((err, req, res, next) => {

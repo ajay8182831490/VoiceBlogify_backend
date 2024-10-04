@@ -63,20 +63,20 @@ model Post {
 
 model Subscription {
   id                String        @id @default(uuid())
-  userId            String
+  userId            String       @unique
   user              User          @relation(fields: [userId], references: [id])
   plan              Plan          @default(FREE)
   status            String        @default("ACTIVE")
   startDate         DateTime      @default(now())
-  endDate           DateTime?
-  isActive          Boolean       @default(true)
+ 
+  
   billingCycle      BillingCycle  @default(MONTHLY)
-  trialEndDate      DateTime?
+  
   remainingPosts    Int           @default(1)
   nextDueDate       DateTime?
   invoiceLink       String?
-  payments          Payment[]
-  features          PlanFeature[] 
+
+ 
 }
 
 
@@ -87,19 +87,19 @@ model PlanFeature {
   description     String?
   limit           Int
   billingCycle    BillingCycle?
-  subscriptionId  String?       
-  subscription    Subscription?  @relation(fields: [subscriptionId], references: [id])
+  
 }
 model Payment {
   id              Int            @id @default(autoincrement())
   userId          String
   user            User           @relation(fields: [userId], references: [id])
-  subscriptionId  String
-  subscription    Subscription   @relation(fields: [subscriptionId], references: [id])
+ 
   amount          Float
-  paymentDate     DateTime       @default(now()) // Date of the payment transaction
-  paymentMethod   PaymentMethod  @default(PAYPAL) // Method used for the payment (only PayPal)
-  status          String         @default("COMPLETED") // Payment status: COMPLETED, PENDING, FAILED
+  paymentDate     DateTime       @default(now()) 
+  paymentMethod   PaymentMethod  @default(PAYPAL) 
+  status          String         @default("COMPLETED")
+   payerId       String?        
+  paymentId     String  
 }
 
 enum Platform {
