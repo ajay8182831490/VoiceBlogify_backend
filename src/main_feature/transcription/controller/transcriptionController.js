@@ -3,7 +3,7 @@ import util from 'util';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { logInfo, logError } from '../../../utils/logger.js';
-const execPromise = util.promisify(exec);
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -25,15 +25,61 @@ const audioSizeLimits = {
 };
 
 
+const cookiesFilePath = path.join(__dirname, '../../cookies.txt');
+console.log(cookiesFilePath);
+
+const execPromise = (command) => {
+    return new Promise((resolve, reject) => {
+        exec(command, (error, stdout, stderr) => {
+            if (error) {
+                reject(new Error(`Command failed: ${stderr}`));
+            }
+            resolve({ stdout, stderr });
+        });
+    });
+};
+
+
+
 const downloadAudio = async (url, outputFilePath) => {
-    const command = `yt-dlp -f bestaudio -o "${outputFilePath}" ${url}`;
+    console.log('Attempting to download audio from URL:', url); // Log the URL
+
+    const ytDlpCommand = [
+        'yt-dlp',
+        '--cookies', cookiesFilePath,
+        '--user-agent',
+        '"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.3"',
+        '-f', 'bestaudio',
+        '-o', outputFilePath,
+        '--restrict-filenames',
+        '--no-mtime',
+        '-v', // Verbose output for debugging
+        url // URL should be the last argument
+    ];
+
+    // Construct the full command string
+    const commandString = ytDlpCommand.join(' ');
+
     try {
-        await execPromise(command);
+        console.log('Executing command:', commandString); // Log the command being executed
+        const { stdout, stderr } = await execPromise(commandString); // Pass the command string directly
+
+        // Log stdout and stderr for debugging
+        console.log('yt-dlp stdout:', stdout);
+        if (stderr) {
+            console.error('yt-dlp stderr:', stderr); // Log stderr for debugging
+            throw new Error(`yt-dlp stderr output indicates a problem: ${stderr}`);
+        }
+
+        return stdout; // Return the standard output
     } catch (error) {
-        logError(error, path.basename(__filename), downloadAudio);
-        throw new Error('Failed to download audio');
+        // Improved error handling
+        console.error('Error in downloadAudio:', error.message); // Log error details
+        console.error('Full command executed:', commandString); // Log the full command for debugging
+        throw new Error('Failed to download audio'); // Rethrow a simplified error message
     }
 };
+
 
 const audioSize = async (audiofile) => {
     return new Promise((resolve, reject) => {
@@ -42,14 +88,12 @@ const audioSize = async (audiofile) => {
                 logError(err, path.basename(__filename), audioSize);
                 return reject(new Error("Error retrieving audio duration"));
             }
-
             const durationInSeconds = metadata.format.duration;
             const durationInMinutes = durationInSeconds / 60;
             resolve(durationInMinutes);
         });
     });
 };
-
 
 export const urlTranscription = async (req, res) => {
     const { userId } = req;
@@ -63,25 +107,16 @@ export const urlTranscription = async (req, res) => {
     let tempAudioPath;
 
     try {
-
         const youtubePattern = /^(https?:\/\/)?(www\.)?(youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/)|youtu\.be\/)[a-zA-Z0-9_-]{11}(\?[^\s]*)?$/;
         if (!youtubePattern.test(url)) {
             return res.status(400).json({ message: "Invalid YouTube URL" });
-
-
-
         }
-
 
         const user = await prisma.user.findUnique({
             where: { id: userId },
             include: {
                 subscriptions: {
-                    where: {
-                        status: "ACTIVE",
-
-                    },
-
+                    where: { status: "ACTIVE" },
                     select: {
                         plan: true,
                         remainingPosts: true,
@@ -94,8 +129,6 @@ export const urlTranscription = async (req, res) => {
             }
         });
 
-
-
         // Check if the user has an active subscription
         if (!user || user.subscriptions.length === 0) {
             return res.status(403).json({ message: "No active subscription found." });
@@ -107,37 +140,22 @@ export const urlTranscription = async (req, res) => {
         if (activeSubscription.remainingPosts <= 0) {
             return res.status(403).json({ message: "No remaining posts available for this subscription." });
         }
+
         tempAudioPath = path.join(__dirname, `${userId}_temp_audio.mp3`);
 
-
-
-        await downloadAudio(url, tempAudioPath);
+        await downloadAudio(url, tempAudioPath); // Call the download function
 
         const durationInMinutes = await audioSize(tempAudioPath);
-
-
-
-
-
         const allowedDuration = audioSizeLimits[activeSubscription.plan];
-
 
         if (durationInMinutes > allowedDuration) {
             return res.status(400).json({ message: `Audio exceeds allowed duration of ${allowedDuration} minutes for your plan.` });
         }
 
-
-
         const text = await speechToText(tempAudioPath);
         console.log(text);
 
-
-
-
-
-
-
-
+        // Clean up the temporary audio file
         fs.unlink(tempAudioPath, (err) => {
             if (err) {
                 logError(err, path.basename(__filename), urlTranscription);
@@ -148,6 +166,7 @@ export const urlTranscription = async (req, res) => {
 
         res.status(200).json({ message: 'Audio downloaded successfully', path: tempAudioPath });
     } catch (error) {
+        // Ensure the temporary audio file is deleted on error
         fs.unlink(tempAudioPath, (err) => {
             if (err) {
                 logError(err, path.basename(__filename), urlTranscription);
@@ -159,8 +178,6 @@ export const urlTranscription = async (req, res) => {
         res.status(500).json({ message: "Internal server error" }); // Send a generic error message to the user
     }
 };
-
-
 
 export const recordTranscription = async (req, res) => {
     const { userId } = req
@@ -184,6 +201,8 @@ export const recordTranscription = async (req, res) => {
         res.status(500).json({ messagge: "internal server error" })
     }
 }
+
+
 
 
 
