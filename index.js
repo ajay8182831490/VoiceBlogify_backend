@@ -74,12 +74,12 @@ app.use(session({
   store: store,
   name: "voiceblogify",
   cookie: {
-    secure: true,
+    secure: false,
     httpOnly: true,
     maxAge: 1000 * 60 * 60 * 24,
-    sameSite: 'none',
+    sameSite: 'lax',
   },
-  proxy: true,
+  proxy: false,
 }));
 app.use(passport.initialize());
 app.use(passport.session());
@@ -98,7 +98,7 @@ const job = new CronJob('*/5 * * * *', async () => {
     console.error('Error keeping alive:', error);
   }
 });
-job.start();
+//job.start();
 
 // Routes
 app.use(authRoutes);
