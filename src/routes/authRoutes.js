@@ -71,7 +71,7 @@ router.get('/auth/google/callback',
 
     req.session.accessToken = accessToken;
 
-    const redirectUrl = req.session.returnTo || 'http://localhost:5173?login=success';
+    const redirectUrl = req.session.returnTo || 'https://voiceblogify.in?login=success';
 
     delete req.session.returnTo;
     res.redirect(redirectUrl);

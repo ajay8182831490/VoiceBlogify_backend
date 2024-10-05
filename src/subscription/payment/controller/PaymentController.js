@@ -58,7 +58,7 @@ const generateAccessToken = async () => {
 const createOrder = async (cart) => {
     const accessToken = await generateAccessToken();
     const url = `${base}/v2/checkout/orders`;
-    console.log("cart", cart)
+
 
 
     const payload = {
