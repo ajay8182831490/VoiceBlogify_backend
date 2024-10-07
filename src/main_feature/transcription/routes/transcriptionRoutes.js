@@ -2,7 +2,7 @@ import express from "express";
 
 const router = express.Router();
 
-import attachUserId from "../../../middleware/atttachedUser.js";
+
 import { ensureAuthenticated } from "../../../middleware/authMiddleware.js";
 import { recordTranscription } from "../controller/transcriptionController.js";
 import multer from 'multer';
