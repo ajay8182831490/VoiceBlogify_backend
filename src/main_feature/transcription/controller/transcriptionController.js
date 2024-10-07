@@ -8,7 +8,9 @@ import { PrismaClient } from "@prisma/client";
 
 import ffmpeg from 'fluent-ffmpeg';
 import * as fs from 'fs/promises';
-
+import transcribeAudioAPI from '../../voice_to_text/spechTranscription.js';
+import { generateBlogFromText } from '../../voice_to_text/blogGeneration.js';
+import sendBlogReadyEmail, { sendFailureEmail } from '../utility/email.js';
 
 
 const prisma = new PrismaClient();
@@ -76,26 +78,16 @@ const extractAudioFromVideo = async (videoBuffer, userId) => {
 
 
 
-const transcribeAudio = async (audioChunk) => {
+const transcribeAudio = async (audioChunk, userSelectedLanguage) => {
     try {
-
-        const transcription = await transcribeAudioAPI(audioChunk);
+        const transcription = await transcribeAudioAPI(audioChunk, userSelectedLanguage);
         return transcription.text || "";
     } catch (error) {
         console.error("Error transcribing audio:", error);
         return "";
     }
-}
-
-const generateBlogFromText = async (transcribedText) => {
-    try {
-        const blogResponse = await generateBlogAPI(transcribedText);
-        return blogResponse.content || ""; // Assuming blog generation API returns a content property
-    } catch (error) {
-        console.error("Error generating blog:", error);
-        return "";
-    }
 };
+
 const checkUserPlan = async (userId) => {
     const userPlan = await prisma.subscription.findFirst({
         where: {
@@ -106,8 +98,15 @@ const checkUserPlan = async (userId) => {
             status: 'ACTIVE'
         },
         select: {
-            plan: true
+            plan: true,
+            user: {
+                select: {
+                    email: true,
+                    name: true
+                }
+            }
         }
+
     });
 
     if (!userPlan) return null;
@@ -265,24 +264,130 @@ export const recordTranscription = async (req, res) => {
         const chunkDuration = 150;
         const chunks = Math.ceil(audioDuration / chunkDuration);
         let combinedTranscription = "";
-        console.log(chunks)
+
+        const userSelectedLanguage = req.body.language || 'en-US';
 
 
-        /*for (let i = 0; i < chunks; i++) {
+        for (let i = 0; i < chunks; i++) {
             const start = i * chunkDuration;
             const end = (i + 1) * chunkDuration > audioDuration ? audioDuration : (i + 1) * chunkDuration;
- 
- 
-            const audioChunk = Buffer.slice(start * 44100 * 2, end * 44100 * 2); // Adjust sample rate as needed
-            //const chunkTranscription = await transcribeAudio(audioChunk);
- 
-            //combinedTranscription += chunkTranscription + " ";
-        }
- 
-        // Step 7: Generate a blog from the combined transcription text
-        //const blogContent = await generateBlogFromText(combinedTranscription);*/
 
-        res.status(200).json({ message: "Audio file transcribed successfully" });
+
+            const audioChunk = Buffer.slice(start * 44100 * 2, end * 44100 * 2);
+            const chunkTranscription = await transcribeAudioAPI(audioChunk, userSelectedLanguage);
+
+            combinedTranscription += chunkTranscription + " ";
+        }
+        combinedTranscription = combinedTranscription.trim();
+        const { title, content, tag } = await generateBlogFromText(combinedTranscription);
+
+        let retry = 2;
+        let errorOccurred = false;
+
+
+        if (title === 'Error') {
+            while (retry-- > 0) {
+                const result = await generateBlogFromText(combinedTranscription);
+
+
+                const { title, content, tag } = result;
+
+
+                if (title !== 'Error') {
+                    break;
+                }
+
+                errorOccurred = true;
+            }
+        }
+
+
+        if (errorOccurred) {
+
+            sendFailureEmail(userPlan.email, userPlan.name)
+            return ('Failed to generate blog after multiple attempts.');
+
+        } else {
+
+
+
+            const tryagain = 1
+
+            await prisma.post.create({
+                data: {
+                    userId: userId,
+                    title: title,
+                    tags: tag,
+                    content: content
+                }
+            })
+
+            const blogCountIncrement = 1;
+            try {
+
+                await prisma.$transaction([
+
+                    prisma.user.update({
+                        where: {
+                            id: userId
+                        },
+                        data: {
+                            blogCount: {
+                                increment: blogCountIncrement
+                            }
+                        }
+                    }),
+
+                    prisma.subscription.update({
+                        where: {
+                            userId: userId
+                        }, data: {
+                            remainingPosts: {
+                                decrement: 1
+                            }
+                        }
+                    })
+                ]);
+
+
+            } catch (error) {
+
+                while (tryagain--) {
+                    await prisma.$transaction([
+
+                        prisma.user.update({
+                            where: {
+                                id: userId
+                            },
+                            data: {
+                                blogCount: {
+                                    increment: blogCountIncrement
+                                }
+                            }
+                        }),
+
+                        prisma.subscription.update({
+                            where: {
+                                userId: userId
+                            }, data: {
+                                remainingPosts: {
+                                    decrement: 1
+                                }
+                            }
+                        })
+                    ]);
+
+                }
+
+            }
+
+            await sendBlogReadyEmail(userPlan.email, userPlan.name, title);
+
+
+
+
+            res.status(200).json({ message: "Audio file transcribed successfully" });
+        }
 
     } catch (error) {
         logError(error, path.basename(__filename));
@@ -291,9 +396,9 @@ export const recordTranscription = async (req, res) => {
     finally {
         if (wavOutputPath) {
             try {
-                await deleteFileWithRetry(wavOutputPath); // Attempt to delete the file with retries
+                await deleteFileWithRetry(wavOutputPath);
             } catch (err) {
-                console.error(`Failed to delete file after retries: ${wavOutputPath}, Error: ${err.message}`);
+                logError("error occured during deleting the waveoutput file", path.basename(__filename), wavOutputPath);
             }
         }
     }
