@@ -12,9 +12,9 @@ const planFeatures = [
     { plan: 'PREMIUM', featureName: 'Total Blogs Allowed', description: 'Maximum number of blogs a user can create.', limit: 20 },
     { plan: 'PREMIUM', featureName: 'Audio Recording Length', description: 'Maximum audio length for recordings in minutes.', limit: 60 },
     { plan: 'PREMIUM', featureName: 'Audio Recording File Size', description: 'Maximum file size for audio recordings in MB.', limit: 300 },
-    { plan: ' BUISNESS', featureName: 'Total Blogs Allowed', description: 'Maximum number of blogs a user can create.', limit: 60 },
-    { plan: ' BUISNESS', featureName: 'Audio Recording Length', description: 'Maximum audio length for recordings in minutes.', limit: 90 },
-    { plan: ' BUISNESS', featureName: 'Audio Recording File Size', description: 'Maximum file size for audio recordings in MB.', limit: 500 },
+    { plan: 'BUISNESS', featureName: 'Total Blogs Allowed', description: 'Maximum number of blogs a user can create.', limit: 60 },
+    { plan: 'BUISNESS', featureName: 'Audio Recording Length', description: 'Maximum audio length for recordings in minutes.', limit: 90 },
+    { plan: 'BUISNESS', featureName: 'Audio Recording File Size', description: 'Maximum file size for audio recordings in MB.', limit: 500 },
 ];
 
 async function main() {
