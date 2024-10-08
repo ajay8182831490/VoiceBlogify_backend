@@ -41,6 +41,8 @@ export const getUserProfile = async (req, res) => {
                     select: {
                         mediumApi: true,
                         mediumUserId: true,
+                        platform: true,
+                        accessToken: true
                     },
                 },
                 payments: {
@@ -51,6 +53,12 @@ export const getUserProfile = async (req, res) => {
                 },
             },
         });
+
+
+        const linkedInTokenExists = user.tokens.some(token => {
+            return token.platform === 'LINKEDIN' && token.accessToken !== null
+        });
+
 
         if (!user) {
             return res.status(404).json({ message: 'User not found' }); // Returning immediately after sending response
@@ -77,15 +85,19 @@ export const getUserProfile = async (req, res) => {
             status: user.subscriptions.length > 0 ? user.subscriptions[0].status : null,
             MediumUrl: validToken ? validToken.mediumApi : undefined,
             MediumPersonId: validToken ? validToken.mediumUserId : undefined,
+
+            linkedInTokenExists
         };
 
 
-        return res.status(200).json(response); // Returning to prevent further execution
+
+
+        return res.status(200).json(response);
     } catch (error) {
         logError(error, path.basename(__filename));
-        // Ensure you're only sending one response
+
         if (!res.headersSent) {
-            return res.status(500).json({ message: "Internal server error" }); // Only respond if headers not sent
+            return res.status(500).json({ message: "Internal server error" });
         }
     }
 };

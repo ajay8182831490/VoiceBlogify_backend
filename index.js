@@ -17,6 +17,8 @@ import bloggerRoutes from './src/blogger/routes/bloggerRoutes.js';
 import userRouter from './src/user/Routes/userRoutes.js';
 
 import paypalpayment from './src/subscription/payment/controller/PaymentController.js'
+//import cronjobrunner from '../VoiceBlogify_backend/src/utils/cronjob.js'
+
 
 dotenv.config();
 
@@ -64,6 +66,7 @@ const corsOptions = {
   exposedHeaders: ['Set-Cookie'],
 };
 app.use(cors(corsOptions));
+//app.use(cronjobrunner);
 
 
 
@@ -83,7 +86,7 @@ app.use(session({
 }));
 app.use(passport.initialize());
 app.use(passport.session());
-app.use(limiter);
+//app.use(limiter);
 
 
 app.get('/keep-alive', (req, res) => {
@@ -98,7 +101,7 @@ const job = new CronJob('*/5 * * * *', async () => {
     console.error('Error keeping alive:', error);
   }
 });
-//job.start();
+job.start();
 
 // Routes
 app.use(authRoutes);
