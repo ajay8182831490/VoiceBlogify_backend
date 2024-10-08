@@ -115,13 +115,7 @@ passport.use(new GoogleStrategy({
           isActive: true,
           startDate: new Date(),
           remainingPosts: 1,
-          features: {
-            create: [
-              { featureName: 'Total Blogs Allowed', limit: 1, plan: 'FREE' },
-              { featureName: 'Audio Recording Length', limit: 10, plan: 'FREE' },
-              { featureName: 'Audio Recording uploading file size', limit: 20, plan: 'FREE' },
-            ],
-          },
+
         },
       });
     }
