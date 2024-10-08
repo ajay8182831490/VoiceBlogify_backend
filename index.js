@@ -77,12 +77,12 @@ app.use(session({
   store: store,
   name: "voiceblogify",
   cookie: {
-    secure: false,
+    secure: true,
     httpOnly: true,
     maxAge: 1000 * 60 * 60 * 24,
-    sameSite: 'lax',
+    sameSite: 'none',
   },
-  proxy: false,
+  proxy: true,
 }));
 app.use(passport.initialize());
 app.use(passport.session());
