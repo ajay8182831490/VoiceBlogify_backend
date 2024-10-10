@@ -102,4 +102,21 @@ export const getUserProfile = async (req, res) => {
     }
 };
 
+export const disconnect_linkedin = async (req, res) => {
+    try {
+
+    } catch (error) {
+        logError(error, path.basename(__filename), disconnect_linkedin);
+        res.status(500).json({ message: "internal server errror" });
+    }
+}
+export const disconnect_medium = async (req, res) => {
+    try {
+
+    } catch (error) {
+        logError(error, path.basename(__filename), disconnect_medium);
+        res.status(500).json({ message: "internal server errror" });
+    }
+}
+
 
