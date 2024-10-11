@@ -1,13 +1,13 @@
 
 
 const attachUserId = (req, res, next) => {
-    if (req.isAuthenticated() && req.user) {
+    if (req.isAuthenticated() && req.user && req.user.isVerified) {
 
 
-        req.userId = (req.user).id;
+
         return next();
     }
-    res.status(401).send('Unauthorized');
+    res.redirect('https://voiceblogify.in/verfied')
 };
 
 export default attachUserId;

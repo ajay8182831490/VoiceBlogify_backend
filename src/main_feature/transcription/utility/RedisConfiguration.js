@@ -34,7 +34,12 @@ transcriptionQueue.process(async (job) => {
     const tempFileName = `output-${job.data.userId}-${Date.now()}.wav`;
     const wavOutputPath = path.join(__dirname, tempFileName);
 
-    logInfo(`going to process backround for user ${job, data.userId}`, path.basename(__filename), transcriptionQueue)
+    console.log(job.data.userPlan)
+
+
+
+
+    logInfo(`going to process backround for user ${job.data.userId}`, path.basename(__filename))
 
     try {
 
@@ -44,12 +49,19 @@ transcriptionQueue.process(async (job) => {
 
 
         await convertToWav(buffer, wavOutputPath);
+
         const chunkDuration = 150;
         const chunks = Math.ceil(job.data.audioDuration / chunkDuration);
-        let combinedTranscription = "";
+
+        console.log("chunks", chunks);
+        let combinedTranscription = `Main aaj ek anokhi kahani sunana chahta hoon. Is kahani ka naam hai 'Dosti ki Shakti'. Ek baar ek chhote se gaon mein do doston ka naam tha Ravi aur Sameer. Dono bachpan se saath the aur har mushkil waqt mein ek dusre ka saath dete the.
+
+Ek din, unhone socha ki wo ek naya vyavsay shuru karenge.Unhone mil kar ek choti si bakery kholi, jahan unhone apne haath se banaye hue pastriyaan aur mithaiyan bechne lage.Doston ki dosti aur mehnat se unka vyavsay safal hua.
+
+Is kahani se humein yeh sikhne ko milta hai ki dosti aur mehnat se koi bhi sapna sach ho sakta hai.Doston ki saath hona zindagi ka sabse bada dhan hai.`;
 
         const userSelectedLanguage = job.data.language || 'en-US';
-        for (let i = 0; i < chunks; i++) {
+        /*for (let i = 0; i < chunks; i++) {
             const start = i * chunkDuration;
             const end = (i + 1) * chunkDuration > job.data.audioDuration ? job.data.audioDuration : (i + 1) * chunkDuration;
 
@@ -58,9 +70,9 @@ transcriptionQueue.process(async (job) => {
             const chunkTranscription = await transcribeAudioAPI(audioChunk, userSelectedLanguage);
 
             combinedTranscription += chunkTranscription + " ";
-        }
-        console.log("Transcription completed. Generating blog...");
+        }*/        console.log("Transcription completed. Generating blog...");
         const { title, content, tag } = await generateBlogFromText(combinedTranscription);
+
 
         let retry = 2;
         let errorOccurred = false;
@@ -85,8 +97,8 @@ transcriptionQueue.process(async (job) => {
         }
 
         if (errorOccurred) {
-            logError("Failed to generate blog after multiple attempts.", path.basename(__filename), transcriptionQueue)
-            await sendFailureEmail(job.data.userPlan.email, job.data.userPlan.name);
+            logError("Failed to generate blog after multiple attempts.", path.basename(__filename))
+            await sendFailureEmail(job.data.userPlan.user.email, job.data.userPlan.user.name);
             return ('Failed to generate blog after multiple attempts.');
         } else {
             console.log("Blog generated successfully. Updating database...");
@@ -137,18 +149,18 @@ transcriptionQueue.process(async (job) => {
                 }
             }
         }
-        await sendBlogReadyEmail(job.data.userPlan.email, job.data.userPlan.name, title);
+        await sendBlogReadyEmail(job.data.userPlan.user.email, job.data.userPlan.user.name, title);
 
 
 
         console.log("Job completed successfully.");
-        return { success: true, userId: job.data.userId, title, content };
-
+        //return { success: true, userId: job.data.userId, title, content };*/
+        return {}
 
 
 
     } catch (error) {
-        logError(error, path.basename(__filename), transcriptionQueue);
+        logError(error, path.basename(__filename));
         throw error;
     } finally {
 
@@ -157,7 +169,7 @@ transcriptionQueue.process(async (job) => {
             await fs.unlink(job.data.audioPath);
             console.log("Temporary files deleted successfully.");
         } catch (cleanupError) {
-            logError("Error deleting temporary files:" + cleanupError, path.basename(__filename), transcriptionQueue);
+            logError("Error deleting temporary files:" + cleanupError, path.basename(__filename));
         }
     }
 });

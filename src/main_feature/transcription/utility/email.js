@@ -1,23 +1,31 @@
 import nodemailer from 'nodemailer'
+import dotenev from 'dotenv'
+dotenev.config();
+
 
 
 const transporter = nodemailer.createTransport({
-    host: 'gmail',
-    port: 465,
-    secure: true,
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
     auth: {
-        user: 'your-email@example.com',
-        pass: 'your-email-password',
+        user: 'voiceblogify@gmail.com',
+        pass: process.env.voiceblogify_email_password,
     },
+
+
+
 });
 
 
 const sendBlogReadyEmail = (userEmail, userName, blogTitle) => {
+
+    console.log(userEmail, userName, blogTitle)
     const mailOptions = {
-        from: '"VoiceBlogify" <your-email@example.com>', // Sender address
+        from: '"VoiceBlogify" <voiceblogify@gmail.com>',
         to: userEmail,
-        subject: `Your Blog "${blogTitle}" is Ready!`, // Subject line
-        text: `Hi ${userName},\n\nYour blog titled "${blogTitle}" is now live! You can start sharing your thoughts and insights with the world.\n\nHappy Blogging!\n\nBest Regards,\nThe VoiceBlogify Team`, // Plain text body
+        subject: `Your Blog "${blogTitle}" is Ready!`,
+        text: `Hi ${userName},\n\nYour blog titled "${blogTitle}" is now live! You can start sharing your thoughts and insights with the world.\n\nHappy Blogging!\n\nBest Regards,\nThe VoiceBlogify Team`,
         html: `<p>Hi ${userName},</p><p>Your blog titled <strong>"${blogTitle}"</strong> is now live! You can start sharing your thoughts and insights with the world.</p><p>Happy Blogging!</p><p>Best Regards,<br>The VoiceBlogify Team</p>`,
     };
 
@@ -31,18 +39,18 @@ const sendBlogReadyEmail = (userEmail, userName, blogTitle) => {
 };
 export const sendFailureEmail = async (userEmail, userName) => {
     const mailOptions = {
-        from: '"VoiceBlogify" <your-email@example.com>', // Sender address
+        from: '"VoiceBlogify" <voiceblogify@gmail.com>',
         to: userEmail,
-        subject: `Blog Generation Failed`, // Subject line
-        text: `Hi ${userName},\n\nWe encountered an issue while generating your blog. Please try again later.\n\nBest Regards,\nThe VoiceBlogify Team`, // Plain text body
+        subject: `Blog Generation Failed`,
+        text: `Hi ${userName},\n\nWe encountered an issue while generating your blog. Please try again later.\n\nBest Regards,\nThe VoiceBlogify Team`,
         html: `<p>Hi ${userName},</p><p>We encountered an issue while generating your blog. Please try again later.</p><p>Best Regards,<br>The VoiceBlogify Team</p>`,
     };
 
     try {
-        await transporter.sendMail(mailOptions); // Send email
-        console.log('Failure notification email sent successfully.'); // Log success
+        await transporter.sendMail(mailOptions);
+        console.log('Failure notification email sent successfully.');
     } catch (error) {
-        console.log('Error sending failure notification email: ', error); // Log error
+        console.log('Error sending failure notification email: ', error);
     }
 };
 export default sendBlogReadyEmail

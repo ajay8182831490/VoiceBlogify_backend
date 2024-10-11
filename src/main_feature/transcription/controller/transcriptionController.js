@@ -439,7 +439,7 @@ export const recordTranscription = async (req, res) => {
             return res.status(403).json({ message: "No active subscription plan" });
         }
 
-        // Set maximum allowed audio duration based on user plan
+
         let maxAllowedDuration;
         switch (userPlan.plan) {
             case "FREE":
@@ -458,7 +458,7 @@ export const recordTranscription = async (req, res) => {
                 return res.status(400).json({ message: "Invalid user plan" });
         }
 
-        // Check if audio duration is valid
+
         if (!audioDuration) {
             return res.status(400).json({ message: "Unable to determine audio duration" });
         }
@@ -473,22 +473,15 @@ export const recordTranscription = async (req, res) => {
 
 
         await transcriptionQueue.add({ userId, audioPath, audioDuration, userPlan });
+        logInfo("we have submit", path.basename(__filename), recordTranscription)
 
-        res.status(200).json({ message: "Processing started, you'll be notified via email once it's done." });
+        // res.status(200).json({ message: "Processing started, you'll be notified via email once it's done." });
 
     } catch (error) {
 
 
         logError(error, path.basename(__filename), recordTranscription);
         res.status(500).json({ message: "Internal server error" });
-    } finally {
-        // Optionally delete the temporary file after processing
-        try {
-            // await fs.unlink(wavOutputPath);
-            // await fs.unlink(wavOutputPath);
-        } catch (err) {
-            logError("Error occurred during deleting the wav output file", path.basename(__filename), wavOutputPath);
-        }
     }
 };
 

@@ -61,7 +61,7 @@ export const getUserProfile = async (req, res) => {
 
 
         if (!user) {
-            return res.status(404).json({ message: 'User not found' }); // Returning immediately after sending response
+            return res.status(404).json({ message: 'User not found' });
         }
 
         const today = new Date();
@@ -103,20 +103,39 @@ export const getUserProfile = async (req, res) => {
 };
 
 export const disconnect_linkedin = async (req, res) => {
-    try {
+    const { userId } = req;
 
+    try {
+        await prisma.token.update({
+            where: { userId: userId, platform: 'LINKEDIN' },
+            data: {
+                accessToken: ""
+            }
+        });
+
+        res.status(200).json({ message: "Successfully disconnected from LinkedIn." });
     } catch (error) {
         logError(error, path.basename(__filename), disconnect_linkedin);
-        res.status(500).json({ message: "internal server errror" });
+        res.status(500).json({ message: "Internal server error" });
     }
-}
-export const disconnect_medium = async (req, res) => {
-    try {
+};
 
+export const disconnect_medium = async (req, res) => {
+    const { userId } = req;
+
+    try {
+        await prisma.token.update({
+            where: { userId: userId },
+            data: {
+                mediumApi: "",
+                mediumUserId: ''
+            }
+        });
+
+        res.status(200).json({ message: "Successfully disconnected from Medium." });
     } catch (error) {
         logError(error, path.basename(__filename), disconnect_medium);
-        res.status(500).json({ message: "internal server errror" });
+        res.status(500).json({ message: "Internal server error" });
     }
 }
-
 
