@@ -323,14 +323,19 @@ export const otpGeneration = async (req, res) => {
 }
 export const checkAuth = async (req, res, next) => {
   if (req.isAuthenticated()) {
+
     return res.status(200).json({
+
       authenticated: true,
       name: req.user.name,
       id: req.user.id,
+      googleId: req.user.id ? true : false,
       profilepic: req.user.profilepic || null,
       isVerified: req.user.isVerified,
       isPaid: req.user.isPaid || false,
-      email: req.user.email
+      email: req.user.email,
+      remainingPosts: req.user && req.user.subscriptions[0].remainingPosts
+
     });
   }
 
@@ -348,7 +353,7 @@ export const AccountVerify = async (req, res, next) => {
 
     const { otp, email } = req.body;
 
-    console.log("mai yaha hu", otp, email);
+
     if (!otp || !email) {
       return res.status(400).json({ message: 'missing field required' });
     }

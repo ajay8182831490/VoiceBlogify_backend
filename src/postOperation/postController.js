@@ -28,7 +28,10 @@ const getAllPost = async (req, res) => {
                 userId: req.userId
             },
             take: limit,
-            skip: skip
+            skip: skip,
+            orderBy: {
+                dateOfCreation: 'desc'
+            }
         });
 
 

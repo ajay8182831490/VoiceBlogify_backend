@@ -37,7 +37,7 @@ export const linkedinMiddleware = async (req, res, next) => {
                 const newAccessToken = await getAccessToken(authorizationCode);
                 req.linkedinToken = newAccessToken;
 
-                // Call the API for user info to validate the new token
+
                 const userInfoResponse = await fetch(
                     "https://api.linkedin.com/v2/userinfo",
                     {

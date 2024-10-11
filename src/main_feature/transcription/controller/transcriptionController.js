@@ -473,7 +473,7 @@ export const recordTranscription = async (req, res) => {
 
 
         await transcriptionQueue.add({ userId, audioPath, audioDuration, userPlan });
-        logInfo("we have submit", path.basename(__filename), recordTranscription)
+
 
         // res.status(200).json({ message: "Processing started, you'll be notified via email once it's done." });
 
@@ -642,7 +642,7 @@ export const recordTranscription = async (req, res) => {
         const text = await speechToText(tempAudioPath);
         console.log(text);
 
-        // Clean up the temporary audio file
+
         fs.unlink(tempAudioPath, (err) => {
             if (err) {
                 logError(err, path.basename(__filename), urlTranscription);
@@ -653,7 +653,7 @@ export const recordTranscription = async (req, res) => {
 
         res.status(200).json({ message: 'Audio downloaded successfully', path: tempAudioPath });
     } catch (error) {
-        // Ensure the temporary audio file is deleted on error
+
         fs.unlink(tempAudioPath, (err) => {
             if (err) {
                 logError(err, path.basename(__filename), urlTranscription);

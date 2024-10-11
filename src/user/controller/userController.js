@@ -105,13 +105,19 @@ export const getUserProfile = async (req, res) => {
 export const disconnect_linkedin = async (req, res) => {
     const { userId } = req;
 
+    logInfo(`Going to disconnect LinkedIn for user ${userId}`, path.basename(__filename));
+
     try {
-        await prisma.token.update({
-            where: { userId: userId, platform: 'LINKEDIN' },
-            data: {
-                accessToken: ""
+        const res1 = await prisma.token.delete({
+            where: {
+                userId_platform: {
+                    userId: userId,
+                    platform: 'LINKEDIN'
+                }
             }
+
         });
+        console.log(res1)
 
         res.status(200).json({ message: "Successfully disconnected from LinkedIn." });
     } catch (error) {
@@ -120,17 +126,23 @@ export const disconnect_linkedin = async (req, res) => {
     }
 };
 
+
 export const disconnect_medium = async (req, res) => {
     const { userId } = req;
+    logInfo(`going to disconnect the medium for user ${req.userId}`, path.basename(__filename));
 
     try {
-        await prisma.token.update({
-            where: { userId: userId },
-            data: {
-                mediumApi: "",
-                mediumUserId: ''
-            }
+        await prisma.token.delete({
+            where: {
+                userId_platform: {
+                    userId: userId,
+                    platform: 'MEDIUM'
+
+                }
+            },
+
         });
+
 
         res.status(200).json({ message: "Successfully disconnected from Medium." });
     } catch (error) {
