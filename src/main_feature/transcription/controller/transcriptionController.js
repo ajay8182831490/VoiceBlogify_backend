@@ -409,9 +409,9 @@ export const recordTranscription = async (req, res) => {
     const { userId } = req;
     logInfo(`Starting audio transcription process for user ${userId}`, path.basename(__filename));
 
-    // Generate a unique file name for the temporary audio file
+
     const tempFileName = `output-${userId}-${Date.now()}.mp3`;
-    const audioPath = path.join(__dirname, tempFileName); // Save in the same directory as the module
+    const audioPath = path.join(__dirname, tempFileName);
 
     try {
         const file = req.file;
@@ -419,7 +419,7 @@ export const recordTranscription = async (req, res) => {
         let Buffer;
         let audioDuration;
 
-        // Handle audio or video files
+
         if (fileType.startsWith('audio/')) {
             Buffer = file.buffer;
             audioDuration = await getAudioDuration(Buffer, userId);
@@ -433,7 +433,7 @@ export const recordTranscription = async (req, res) => {
             return res.status(400).json({ message: "Unsupported file type" });
         }
 
-        // Check user's subscription plan
+
         const userPlan = await checkUserPlan(userId);
         if (!userPlan) {
             return res.status(403).json({ message: "No active subscription plan" });
@@ -443,16 +443,16 @@ export const recordTranscription = async (req, res) => {
         let maxAllowedDuration;
         switch (userPlan.plan) {
             case "FREE":
-                maxAllowedDuration = 10 * 60; // 10 minutes
+                maxAllowedDuration = 10 * 60;
                 break;
             case "BASIC":
-                maxAllowedDuration = 20 * 60; // 20 minutes
+                maxAllowedDuration = 20 * 60;
                 break;
             case "PREMIUM":
-                maxAllowedDuration = 60 * 60; // 60 minutes
+                maxAllowedDuration = 60 * 60;
                 break;
             case "BUSINESS":
-                maxAllowedDuration = 90 * 60; // 90 minutes
+                maxAllowedDuration = 90 * 60;
                 break;
             default:
                 return res.status(400).json({ message: "Invalid user plan" });
@@ -472,7 +472,7 @@ export const recordTranscription = async (req, res) => {
 
 
 
-        await transcriptionQueue.add({ userId, audioPath, audioDuration });
+        await transcriptionQueue.add({ userId, audioPath, audioDuration, userPlan });
 
         res.status(200).json({ message: "Processing started, you'll be notified via email once it's done." });
 
