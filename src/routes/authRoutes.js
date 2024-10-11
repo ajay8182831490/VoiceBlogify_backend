@@ -3,7 +3,7 @@ import passport from '../config/passport.js';
 
 import rateLimit from 'express-rate-limit';
 import { ensureAuthenticated } from '../middleware/authMiddleware.js';
-import { registerUser, logoutUser, resetPassword, otpGeneration, checkAuth, passwordChange } from '../controller/authController.js';
+import { registerUser, logoutUser, resetPassword, otpGeneration, checkAuth, passwordChange, AccountVerify } from '../controller/authController.js';
 
 
 const router = express.Router();
@@ -15,12 +15,20 @@ const otpRateLimiter = rateLimit({
   }
 });
 const loginRateLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
+  windowMs: 60 * 1000,
   max: 4,
   handler: (req, res) => {
     res.status(429).json({ message: "Too many login attempts, please try again later." });
   }
-})
+});
+const RegisterRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000 * 24 * 15,
+  max: 2,
+  handler: (req, res) => {
+    res.status(429).json({ message: "Too many login attempts, please try again later." });
+  }
+});
+
 
 
 
@@ -81,12 +89,13 @@ router.get('/auth/google/callback',
 
 
 
-router.post('/register', loginRateLimiter, registerUser);
-router.get('/logout', ensureAuthenticated, logoutUser);
+router.post('/register', RegisterRateLimiter, registerUser);
+router.get('/logout', ensureAuthenticated, loginRateLimiter, logoutUser);
 router.post('/otpGenrator', otpRateLimiter, otpGeneration)
 router.put('/resetPassword', otpRateLimiter, resetPassword)
 router.get('/status', checkAuth);
-router.patch('/passwordChange', ensureAuthenticated, otpRateLimiter, passwordChange)
+router.patch('/passwordChange', otpRateLimiter, ensureAuthenticated, passwordChange);
+router.post('/user/verfied', otpRateLimiter, ensureAuthenticated, AccountVerify)
 
 
 export default router;

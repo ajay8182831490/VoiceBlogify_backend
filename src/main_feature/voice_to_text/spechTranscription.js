@@ -21,8 +21,10 @@ const client = new SpeechClient({
 );
 
 const transcribeAudioAPI = async (audioChunk, userSelectedLanguage) => {
+
+
     try {
-        const audio = {
+        /*const audio = {
             content: audioChunk.toString('base64'),
         };
 
@@ -43,7 +45,8 @@ const transcribeAudioAPI = async (audioChunk, userSelectedLanguage) => {
             .join('\n');
 
 
-        return transcription;
+        return transcription;*/
+        return "ey"
 
     } catch (error) {
         logError(error, path.basename(__filename), transcribeAudioAPI);

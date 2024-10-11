@@ -11,6 +11,7 @@ import * as fs from 'fs/promises';
 import transcribeAudioAPI from '../../voice_to_text/spechTranscription.js';
 import { generateBlogFromText } from '../../voice_to_text/blogGeneration.js';
 import sendBlogReadyEmail, { sendFailureEmail } from '../utility/email.js';
+import transcriptionQueue from '../utility/RedisConfiguration.js';
 
 
 const prisma = new PrismaClient();
@@ -78,7 +79,7 @@ const extractAudioFromVideo = async (videoBuffer, userId) => {
 
 
 
-const transcribeAudio = async (audioChunk, userSelectedLanguage) => {
+export const transcribeAudio = async (audioChunk, userSelectedLanguage) => {
     try {
         const transcription = await transcribeAudioAPI(audioChunk, userSelectedLanguage);
         return transcription.text || "";
@@ -113,7 +114,7 @@ const checkUserPlan = async (userId) => {
 
     return userPlan;
 };
-const convertToWav = async (buffer, outputPath) => {
+export const convertToWav = async (buffer, outputPath) => {
     let tempFilePath = null;
     try {
         tempFilePath = path.join(__dirname, `temp-audio-${Date.now()}.mp3`);
@@ -174,7 +175,7 @@ const deleteFileWithRetry = (filePath, retries = 3, delay = 1000) => {
 
 
 
-export const recordTranscription = async (req, res) => {
+/*export const recordTranscription = async (req, res) => {
     const { userId } = req;
     logInfo(`Starting audio transcription process for user ${userId}`, path.basename(__filename), recordTranscription);
     const tempFileName = `output-${userId}-${Date.now()}.wav`;
@@ -402,7 +403,88 @@ export const recordTranscription = async (req, res) => {
             }
         }
     }
+};*/
+
+export const recordTranscription = async (req, res) => {
+    const { userId } = req;
+    logInfo(`Starting audio transcription process for user ${userId}`, path.basename(__filename));
+
+
+    const tempFileName = `output-${userId}-${Date.now()}.mp3`;
+    const audioPath = path.join(__dirname, tempFileName);
+
+    try {
+        const file = req.file;
+        const fileType = file.mimetype;
+        let Buffer;
+        let audioDuration;
+
+
+        if (fileType.startsWith('audio/')) {
+            Buffer = file.buffer;
+            audioDuration = await getAudioDuration(Buffer, userId);
+        } else if (fileType.startsWith('video/')) {
+            const videoBuffer = file.buffer;
+            audioDuration = await getAudioDuration(videoBuffer, userId);
+            Buffer = await extractAudioFromVideo(videoBuffer, userId);
+
+            if (!Buffer) return res.status(500).json({ message: "Audio extraction from video failed" });
+        } else {
+            return res.status(400).json({ message: "Unsupported file type" });
+        }
+
+
+        const userPlan = await checkUserPlan(userId);
+        if (!userPlan) {
+            return res.status(403).json({ message: "No active subscription plan" });
+        }
+
+
+        let maxAllowedDuration;
+        switch (userPlan.plan) {
+            case "FREE":
+                maxAllowedDuration = 10 * 60;
+                break;
+            case "BASIC":
+                maxAllowedDuration = 20 * 60;
+                break;
+            case "PREMIUM":
+                maxAllowedDuration = 60 * 60;
+                break;
+            case "BUSINESS":
+                maxAllowedDuration = 90 * 60;
+                break;
+            default:
+                return res.status(400).json({ message: "Invalid user plan" });
+        }
+
+
+        if (!audioDuration) {
+            return res.status(400).json({ message: "Unable to determine audio duration" });
+        }
+
+        if (audioDuration > maxAllowedDuration) {
+            return res.status(400).json({ message: `Your plan allows a maximum of ${maxAllowedDuration / 60} minutes of audio` });
+        }
+
+        await fs.writeFile(audioPath, Buffer);
+
+
+
+
+        await transcriptionQueue.add({ userId, audioPath, audioDuration, userPlan });
+
+
+        // res.status(200).json({ message: "Processing started, you'll be notified via email once it's done." });
+
+    } catch (error) {
+
+
+        logError(error, path.basename(__filename), recordTranscription);
+        res.status(500).json({ message: "Internal server error" });
+    }
 };
+
 
 
 
@@ -560,7 +642,7 @@ export const recordTranscription = async (req, res) => {
         const text = await speechToText(tempAudioPath);
         console.log(text);
 
-        // Clean up the temporary audio file
+
         fs.unlink(tempAudioPath, (err) => {
             if (err) {
                 logError(err, path.basename(__filename), urlTranscription);
@@ -571,7 +653,7 @@ export const recordTranscription = async (req, res) => {
 
         res.status(200).json({ message: 'Audio downloaded successfully', path: tempAudioPath });
     } catch (error) {
-        // Ensure the temporary audio file is deleted on error
+
         fs.unlink(tempAudioPath, (err) => {
             if (err) {
                 logError(err, path.basename(__filename), urlTranscription);

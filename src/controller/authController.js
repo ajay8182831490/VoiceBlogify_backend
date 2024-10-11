@@ -12,7 +12,7 @@ const __filename = fileURLToPath(import.meta.url);
 const prisma = new PrismaClient();
 import validator from 'validator'
 const generateOTP = () => {
-  const otpLength = 4;
+  const otpLength = 6;
   const min = Math.pow(10, otpLength - 1);
   const max = Math.pow(10, otpLength) - 1;
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -168,8 +168,8 @@ export const resetPassword = async (req, res) => {
     })) {
       return res.status(400).json({ message: 'Weak password ! Please enter a strong passsowrd' });
     }
-    if (!otp || !/^\d{4}$/.test(otp)) {
-      return res.status(400).json({ message: 'OTP must be a 4-digit number.' });
+    if (!otp || !/^\d{6}$/.test(otp)) {
+      return res.status(400).json({ message: 'OTP must be a 6-digit number.' });
     }
 
 
@@ -323,17 +323,102 @@ export const otpGeneration = async (req, res) => {
 }
 export const checkAuth = async (req, res, next) => {
   if (req.isAuthenticated()) {
+
     return res.status(200).json({
+
       authenticated: true,
       name: req.user.name,
       id: req.user.id,
+      googleId: req.user.id ? true : false,
       profilepic: req.user.profilepic || null,
       isVerified: req.user.isVerified,
-      isPaid: req.user.isPaid || false
+      isPaid: req.user.isPaid || false,
+      email: req.user.email,
+      remainingPosts: req.user && req.user.subscriptions[0].remainingPosts
+
     });
   }
 
   return res.status(401).json({ authenticated: false });
 };
+
+
+export const AccountVerify = async (req, res, next) => {
+  const { email } = req.body;
+  logInfo(`going to verfify the account for the user ${email}`, path.basename(__filename), resetPassword);
+
+  try {
+
+
+
+    const { otp, email } = req.body;
+
+
+    if (!otp || !email) {
+      return res.status(400).json({ message: 'missing field required' });
+    }
+    const email1 = validator.normalizeEmail(email);
+    const otp1 = validator.trim(otp);
+
+    if (!validator.isEmail(email1)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    if (!otp || !/^\d{6}$/.test(otp1)) {
+      return res.status(410).json({ message: 'OTP must be a 6-digit number.' });
+    }
+
+
+
+
+
+
+    const existingUser = await prisma.user.findUnique({
+      where: {
+        email: email1
+      }
+    })
+    if (!existingUser) {
+      return res.status(404).json({ message: "user does not exist please enter the valid email or signup" });
+
+    }
+    const { expiryTime: storedExpiryTime, otp: storedOtp } = existingUser;
+
+    if (Date.now() > storedExpiryTime) {
+      await prisma.user.update({
+        where: { email: email1 },
+        data: { otp: null, expiryTime: null }
+      });
+      return res.status(410).json({ message: "OTP has expired. Please request a new one." });
+    }
+
+    if (otp1 != storedOtp) {
+      return res.status(401).json({ message: "Invalid OTP." });
+    }
+
+
+
+
+    await prisma.user.update({
+      where: {
+        email: email1
+      }, data: {
+        otp: null,
+        expiryTime: null,
+        isVerified: true
+
+
+      }
+    })
+    res.status(200).json({ message: 'Account Verified successfull ' })
+
+
+
+  } catch (ex) {
+    logError(ex, path.basename(__filename));
+    res.status(500).json({ message: "error occur during verify the account" })
+
+  }
+}
 
 

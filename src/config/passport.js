@@ -67,7 +67,7 @@ passport.use(new GoogleStrategy({
   clientID: process.env.clientid,
   clientSecret: process.env.clientsecret,
   callbackURL: 'https://voiceblogify-backend.onrender.com/auth/google/callback',
-  //callbackURL: 'http://localhost:4000/auth/google/callback',
+  
   scope: ['openid', 'profile', 'email', 'https://www.googleapis.com/auth/blogger'],
 }, async (token, refreshToken, profile, done) => {
   try {
@@ -115,13 +115,7 @@ passport.use(new GoogleStrategy({
           isActive: true,
           startDate: new Date(),
           remainingPosts: 1,
-          features: {
-            create: [
-              { featureName: 'Total Blogs Allowed', limit: 1, plan: 'FREE' },
-              { featureName: 'Audio Recording Length', limit: 10, plan: 'FREE' },
-              { featureName: 'Audio Recording uploading file size', limit: 20, plan: 'FREE' },
-            ],
-          },
+
         },
       });
     }
@@ -142,7 +136,27 @@ passport.serializeUser((user, done) => {
 
 passport.deserializeUser(async (id, done) => {
   try {
-    const user = await prisma.user.findUnique({ where: { id } });
+
+
+    const user = await prisma.user.findUnique({
+      where: { id }, select: {
+        id: true,
+        email: true,
+        googleId: true,
+        name: true,
+        profilepic: true,
+        blogCount: true,
+        isVerified: true,
+        subscriptions: {
+          select: {
+            remainingPosts: true,
+          },
+        },
+      }
+    });
+
+
+
     done(null, user);
   } catch (err) {
     done(err);

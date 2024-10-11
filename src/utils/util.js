@@ -33,21 +33,16 @@ function getToken() {
     return token;
 }
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    port: 465,
-    secure: true,
-    logger: true,
-    debug: true,
-
-
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
     auth: {
-        user: process.env.email,
-        pass: process.env.pass,
-        method: 'login'
+        user: 'voiceblogify@gmail.com',
+        pass: process.env.voiceblogify_email_password,
     },
-    tls: {
-        rejectUnauthorized: false
-    }
+
+
+
 });
 const sendEmail = (email, content) => {
     const mailOptions = {

@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import { CronJob } from 'cron';
 import linkdeinRoutes from './src/linkedin/routes/LinkedinRoutes.js';
-import redditRoutes from './src/Reddit/routes/RedditRoutes.js';
+
 import transcriptionRoutes from './src/main_feature/transcription/routes/transcriptionRoutes.js';
 import postOperation from './src/postOperation/postRoutes.js';
 import rateLimit from 'express-rate-limit';
@@ -18,6 +18,7 @@ import userRouter from './src/user/Routes/userRoutes.js';
 
 import paypalpayment from './src/subscription/payment/controller/PaymentController.js'
 //import cronjobrunner from '../VoiceBlogify_backend/src/utils/cronjob.js'
+
 
 
 dotenv.config();
@@ -50,7 +51,13 @@ store.on('error', (error) => {
 });
 
 app.set("trust proxy", 1);
+const init = async () => {
 
+
+  app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+  });
+};
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -122,6 +129,5 @@ app.use((err, req, res, next) => {
 
 
 
-app.listen(port, () => {
-  console.log("Server is running on port", port);
-});
+
+init();
