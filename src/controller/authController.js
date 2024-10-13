@@ -334,7 +334,7 @@ export const checkAuth = async (req, res, next) => {
       isVerified: req.user.isVerified,
       isPaid: req.user.isPaid || false,
       email: req.user.email,
-      remainingPosts: req.user && req.user.subscriptions[0].remainingPosts
+      remainingPosts: req.user && req.user.subscriptions[0].remainingPosts||0
 
     });
   }
