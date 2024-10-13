@@ -8,6 +8,11 @@ import { PrismaClient } from "@prisma/client";
 
 
 const prisma = new PrismaClient();
+import { JSDOM } from 'jsdom'
+import DOMPurify from 'dompurify';
+const window = (new JSDOM('')).window;
+const purify = DOMPurify(window);
+
 
 
 
@@ -148,6 +153,28 @@ export const disconnect_medium = async (req, res) => {
     } catch (error) {
         logError(error, path.basename(__filename), disconnect_medium);
         res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+
+export const feedBack = async (req, res) => {
+    logInfo(`going to add the feedback from user ${req.userId}`, path.basename(__filename), feedBack);
+    try {
+
+        let { content } = req.body;
+
+        content = purify.sanitize(content);
+        if (!content) {
+            res.status(400).json({ message: "missing field required" });
+
+        }
+
+        await prisma.feedBack.create({ data: { userId: req.userId, content: content } });
+        res.status(200).json({ message: "thanks for your feedback" })
+
+
+    } catch (error) {
+        res.status(500).json({ message: "internal server error" });
     }
 }
 

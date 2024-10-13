@@ -13,7 +13,11 @@ const upload = multer({
     storage: storage,
     fileFilter: (req, file, cb) => {
 
-        const acceptedMimeTypes = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp4', 'audio/x-aiff', 'video/mp4', 'video/x-msvideo', 'video/x-m4v', 'video/ogg', 'video/webm'];
+
+
+
+
+        const acceptedMimeTypes = ['audio/mpeg', 'audio/webm', 'audio/wav', 'audio/ogg', 'audio/mp4', 'audio/x-aiff', 'video/mp4', 'video/x-msvideo', 'video/x-m4v', 'video/ogg', 'video/webm'];
 
         if (acceptedMimeTypes.includes(file.mimetype)) {
             cb(null, true);
@@ -24,6 +28,8 @@ const upload = multer({
 })
 
 
-router.post('/transcription/audioRecord', ensureAuthenticated, upload.single('file'), recordTranscription);
+
+router.post('/transcription/audioRecord', ensureAuthenticated, upload.single('audio'), recordTranscription);
+router.post('/transcription/audiofile', ensureAuthenticated, upload.single('file'), recordTranscription);
 
 export default router;

@@ -68,7 +68,7 @@ passport.use(new GoogleStrategy({
   clientSecret: process.env.clientsecret,
   callbackURL: 'https://voiceblogify-backend.onrender.com/auth/google/callback',
   //callbackURL: 'http://localhost:4000/auth/google/callback',
-  //callbackURL: 'http://localhost:4000/auth/google/callback',
+
   scope: ['openid', 'profile', 'email', 'https://www.googleapis.com/auth/blogger'],
 }, async (token, refreshToken, profile, done) => {
   try {
@@ -113,7 +113,7 @@ passport.use(new GoogleStrategy({
           userId: user.id,
           plan: 'FREE',
           status: 'ACTIVE',
-          isActive: true,
+
           startDate: new Date(),
           remainingPosts: 1,
 

@@ -12,6 +12,8 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 
 const { PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET } = process.env;
+
+
 const PLAN_PRICING = {
     BASIC: { MONTHLY: 999, YEARLY: 8988 },
     PREMIUM: { MONTHLY: 2999, YEARLY: 23988 },
@@ -49,6 +51,8 @@ const generateAccessToken = async () => {
         });
 
         const data = await response.json();
+
+
 
         return data.access_token;
     } catch (error) {
@@ -142,7 +146,10 @@ router.post("/paypal/orders", ensureAuthenticated, async (req, res) => {
 
         const { cart } = req.body;
 
+
         const { jsonResponse, httpStatusCode } = await createOrder(cart);
+
+
         res.status(httpStatusCode).json(jsonResponse);
     } catch (error) {
         logError(error, path.basename(__filename));
@@ -267,6 +274,8 @@ const handlePaymentSubcription = async (
 
 
 
+
+
         const validate = validatePaymentAndGetPlan(amount);
 
 
@@ -301,6 +310,16 @@ const handlePaymentSubcription = async (
                 remainingPosts: remainingPosts,
             },
         });
+
+        await prisma.user.update({
+            where: {
+                id: userId
+            }
+            , data: {
+
+                isVerified: true
+            }
+        })
 
 
     } catch (error) {

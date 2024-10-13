@@ -43,9 +43,11 @@ const transcribeAudioAPI = async (audioChunk, userSelectedLanguage) => {
         const transcription = response.results
             .map(result => result.alternatives[0].transcript)
             .join('\n');
-
+  
 
         return transcription;*/
+
+        console.log("inside ", audioChunk)
         return "ey"
 
     } catch (error) {
