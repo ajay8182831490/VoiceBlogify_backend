@@ -82,16 +82,10 @@ export const registerUser = async (req, res) => {
         userId: user.id,
         plan: 'FREE',
         status: 'ACTIVE',
-        isActive: true,
+
         startDate: new Date(),
         remainingPosts: 1,
-        features: {
-          create: [
-            { featureName: 'Total Blogs Allowed', limit: 1, plan: 'FREE' },
-            { featureName: 'Audio Recording Length', limit: 10, plan: 'FREE' },
-            { featureName: 'Audio Recording uploading file size', limit: 20, plan: 'FREE' },
-          ],
-        },
+
       }
     });
 
@@ -149,7 +143,7 @@ export const resetPassword = async (req, res) => {
 
 
 
-    const { otp, email, password } = req.body;
+    let { otp, email, password } = req.body;
     if (!otp || !email || !password) {
       return res.status(400).json({ message: 'missing field required' });
     }
@@ -229,9 +223,10 @@ export const passwordChange = async (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;
 
-    password = validator.trim(password);
+    const password = validator.trim(newPassword);
+    const oPassword = validator.trim(oldPassword);
 
-    if (!validator.isStrongPassword(newPassword, {
+    if (!validator.isStrongPassword(password, {
       minLength: 6,
       minLowercase: 1,
       minUppercase: 1,
@@ -254,7 +249,7 @@ export const passwordChange = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    const isMatch = await bcrypt.compare(oPassword, user.password);
 
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid password' });
@@ -324,19 +319,23 @@ export const otpGeneration = async (req, res) => {
 export const checkAuth = async (req, res, next) => {
   if (req.isAuthenticated()) {
 
+
+
     return res.status(200).json({
 
       authenticated: true,
       name: req.user.name,
       id: req.user.id,
-      googleId: req.user.id ? true : false,
+      googleId: req.user.googleId ? true : false,
       profilepic: req.user.profilepic || null,
       isVerified: req.user.isVerified,
       isPaid: req.user.isPaid || false,
       email: req.user.email,
+
       remainingPosts: (req.user && req.user.subscriptions && req.user.subscriptions[0]) 
                 ? req.user.subscriptions[0].remainingPosts 
                 : 0
+
 
     });
   }

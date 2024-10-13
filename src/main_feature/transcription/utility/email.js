@@ -20,7 +20,7 @@ const transporter = nodemailer.createTransport({
 
 const sendBlogReadyEmail = (userEmail, userName, blogTitle) => {
 
-    console.log(userEmail, userName, blogTitle)
+
     const mailOptions = {
         from: '"VoiceBlogify" <voiceblogify@gmail.com>',
         to: userEmail,

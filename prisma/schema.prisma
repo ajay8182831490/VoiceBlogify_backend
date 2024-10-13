@@ -5,6 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+
 }
 
 model User {
@@ -30,6 +31,7 @@ model User {
   RefreshToken String?
 
   lastActiveDay   DateTime @default(now())
+  feedback FeedBack[]
 }
 
 model Token {
@@ -127,4 +129,12 @@ enum BillingCycle {
 
 enum PaymentMethod {
   PAYPAL
+}
+
+
+model FeedBack{
+    id              Int            @id @default(autoincrement())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id])
+  content String
 }

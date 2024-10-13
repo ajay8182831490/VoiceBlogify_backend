@@ -33,8 +33,8 @@ const transcriptionQueue = new Bull('transcriptionQueue', {
 transcriptionQueue.process(async (job) => {
     const tempFileName = `output-${job.data.userId}-${Date.now()}.wav`;
     const wavOutputPath = path.join(__dirname, tempFileName);
+    console.log(job.data)
 
-    console.log(job.data.userPlan)
 
 
 
@@ -49,28 +49,55 @@ transcriptionQueue.process(async (job) => {
 
 
         await convertToWav(buffer, wavOutputPath);
+        const userSelectedLanguage = job.data.language || 'en-US';
 
-        const chunkDuration = 150;
-        const chunks = Math.ceil(job.data.audioDuration / chunkDuration);
 
-        console.log("chunks", chunks);
+
+        //console.log("chunks", chunks);
         let combinedTranscription = `Main aaj ek anokhi kahani sunana chahta hoon. Is kahani ka naam hai 'Dosti ki Shakti'. Ek baar ek chhote se gaon mein do doston ka naam tha Ravi aur Sameer. Dono bachpan se saath the aur har mushkil waqt mein ek dusre ka saath dete the.
 
 Ek din, unhone socha ki wo ek naya vyavsay shuru karenge.Unhone mil kar ek choti si bakery kholi, jahan unhone apne haath se banaye hue pastriyaan aur mithaiyan bechne lage.Doston ki dosti aur mehnat se unka vyavsay safal hua.
 
 Is kahani se humein yeh sikhne ko milta hai ki dosti aur mehnat se koi bhi sapna sach ho sakta hai.Doston ki saath hona zindagi ka sabse bada dhan hai.`;
 
-        const userSelectedLanguage = job.data.language || 'en-US';
-        /*for (let i = 0; i < chunks; i++) {
-            const start = i * chunkDuration;
-            const end = (i + 1) * chunkDuration > job.data.audioDuration ? job.data.audioDuration : (i + 1) * chunkDuration;
 
 
-            const audioChunk = buffer.slice(start * 44100 * 2, end * 44100 * 2);
+
+
+        const chunkDuration = 150;
+        const chunks = Math.ceil(job.data.audioDuration / chunkDuration);
+
+        const totalDurationInSeconds = job.data.audioDuration;
+        const bytesPerChunk = Math.floor(buffer.length / totalDurationInSeconds * chunkDuration);
+
+
+        console.log(`Bytes per chunk: ${bytesPerChunk}`);
+
+
+        for (let i = 0; i < chunks; i++) {
+            const startByte = i * bytesPerChunk;
+            const endByte = Math.min((i + 1) * bytesPerChunk, buffer.length);
+
+            console.log(`Chunk ${i}: Start Byte: ${startByte}, End Byte: ${endByte}`);
+
+            if (startByte >= buffer.length || endByte > buffer.length) {
+                console.log(`Chunk ${i} is out of buffer bounds.`);
+                break;
+            }
+
+            const audioChunk = buffer.slice(startByte, endByte);
+            console.log(`Chunk ${i} size: ${audioChunk.length} bytes`);
             const chunkTranscription = await transcribeAudioAPI(audioChunk, userSelectedLanguage);
 
-            combinedTranscription += chunkTranscription + " ";
-        }*/        console.log("Transcription completed. Generating blog...");
+            //combinedTranscription += chunkTranscription + " ";
+
+        }
+
+        // Process the audioChunk...
+
+
+
+
         const { title, content, tag } = await generateBlogFromText(combinedTranscription);
 
 
@@ -101,7 +128,7 @@ Is kahani se humein yeh sikhne ko milta hai ki dosti aur mehnat se koi bhi sapna
             await sendFailureEmail(job.data.userPlan.user.email, job.data.userPlan.user.name);
             return ('Failed to generate blog after multiple attempts.');
         } else {
-            console.log("Blog generated successfully. Updating database...");
+
 
             const userId = job.data.userId;
 
@@ -129,7 +156,7 @@ Is kahani se humein yeh sikhne ko milta hai ki dosti aur mehnat se koi bhi sapna
                     })
                 ]);
             } catch (transactionError) {
-                console.error("Error during database transaction:", transactionError);
+
 
 
                 try {
@@ -144,7 +171,8 @@ Is kahani se humein yeh sikhne ko milta hai ki dosti aur mehnat se koi bhi sapna
                         })
                     ]);
                 } catch (retryError) {
-                    console.error("Failed to update database after retry:", retryError);
+
+                    logError("Failed to update database after retry", path.basename(__filename));
                     throw retryError;
                 }
             }
@@ -153,9 +181,9 @@ Is kahani se humein yeh sikhne ko milta hai ki dosti aur mehnat se koi bhi sapna
 
 
 
-        console.log("Job completed successfully.");
-        //return { success: true, userId: job.data.userId, title, content };*/
+
         return {}
+
 
 
 
@@ -173,5 +201,20 @@ Is kahani se humein yeh sikhne ko milta hai ki dosti aur mehnat se koi bhi sapna
         }
     }
 });
+// transcriptionQueue.on('completed', (job) => {
+//     console.log(`Job completed with result ${job.returnvalue}`);
+// });
+
+
+
+// transcriptionQueue.on('progress', (job, progress) => {
+//     console.log(`Job ${job.id} progress: ${progress}%`);
+// });
+transcriptionQueue.on('failed', (job, err) => {
+    console.error(`Job ${job.id} failed:`, err);
+
+    sendFailureEmail(job.data.userPlan.user.email, job.data.userPlan.user.name,);
+})
+
 
 export default transcriptionQueue;

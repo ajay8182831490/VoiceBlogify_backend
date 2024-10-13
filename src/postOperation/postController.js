@@ -1,7 +1,7 @@
 import { logInfo, logError } from "../utils/logger.js"
 
-import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
+import { Prisma, PrismaClient } from "@prisma/client";
+
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -10,6 +10,7 @@ import { JSDOM } from 'jsdom'
 import DOMPurify from 'dompurify';
 const window = (new JSDOM('')).window;
 const purify = DOMPurify(window);
+const prisma = new PrismaClient();
 
 
 
@@ -19,16 +20,16 @@ const getAllPost = async (req, res) => {
 
     try {
 
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 5;
-        const skip = (page - 1) * limit;
+        //const page = parseInt(req.query.page) || 1;
+        //const limit = parseInt(req.query.limit) || 5;
+        //const skip = (page - 1) * limit;
 
         const posts = await prisma.post.findMany({
             where: {
                 userId: req.userId
             },
-            take: limit,
-            skip: skip,
+            // take: limit,
+            // skip: skip,
             orderBy: {
                 dateOfCreation: 'desc'
             }
