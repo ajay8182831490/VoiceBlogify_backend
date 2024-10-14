@@ -27,7 +27,7 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(helmet()); // Apply Helmet for security headers
-
+app.set('trust proxy', 1); 
 // Content Security Policy (CSP) Configuration
 const cspConfig = {
   directives: {
@@ -42,6 +42,7 @@ const cspConfig = {
   },
 };
 app.use(helmet.contentSecurityPolicy(cspConfig));
+
 
 // Security headers for protection against XSS, clickjacking, etc.
 app.use(helmet.noSniff());  // X-Content-Type-Options: nosniff
