@@ -70,7 +70,7 @@ export async function fromFile(audioFilePath) {
     let speechRecognizer;
     let fullTranscription = '';
 
-    console.log("Inside the transcription");
+    console.log(audioFilePath);
 
     return new Promise(async (resolve, reject) => {
         try {
@@ -113,18 +113,10 @@ export async function fromFile(audioFilePath) {
                 }
             );
 
+
         } catch (error) {
             console.error('Error during transcription:', error);
-            reject(error); // Reject if there is an error during setup
-        } finally {
-            // Wait for the transcription to complete before deleting the file
-            try {
-                await fs.access(audioFilePath);
-                await fs.unlink(audioFilePath);
-                console.log(`Deleted audio file: ${audioFilePath}`);
-            } catch (unlinkError) {
-                console.error('Error deleting audio file:', unlinkError);
-            }
+            reject(error);
         }
     });
 }

@@ -30,76 +30,99 @@ const redisOptions = {
 };
 
 const redis = new Redis(redisOptions);
-const jobOptions = {
-    attempts: 3, // Maximum number of retry attempts
-};
+
 
 const transcriptionQueue = new Bull('transcriptionQueue', {
     redis: redisOptions,
+    limiter: {
+        max: 10, // Max number of jobs to process in parallel
+        duration: 1000, // Duration in milliseconds
+    },
 });
 
 transcriptionQueue.process(async (job) => {
     logInfo(`Processing background task for user ${job.data.userId}`, path.basename(__filename));
 
-
-    if (job.attemptsMade >= job.opts.attempts) {
-        // Cleanup original audio file only if all attempts have failed
+    /*if (job.attemptsMade >= job.opts.attempts) {
         await cleanupAudioFile(job.data.audioPath);
-    }
+    }*/
 
     const combinedTranscription = [];
     let failedChunks = 0;
 
     try {
-        const buffer = await fs.readFile(job.data.audioPath);
-        const userSelectedLanguage = job.data.language || 'en-US';
-        const chunkDuration = 150; // seconds
+        const audioPath = path.resolve(__dirname, job.data.audioPath);
+        console.log(audioPath);
+
+
+        try {
+            await fs.access(audioPath)
+        } catch (error) {
+            console.log("path not accesssile")
+        }
+
+
+        const buffer = await fs.readFile(audioPath);
+        console.log(buffer)
+        //const userSelectedLanguage = job.data.language || 'en-US';
+
+
+
+
+        const chunkDuration = 150;
+        const chunks = Math.ceil(job.data.audioDuration / chunkDuration);
+
         const totalDurationInSeconds = job.data.audioDuration;
-        const chunks = Math.ceil(totalDurationInSeconds / chunkDuration);
         const bytesPerChunk = Math.floor(buffer.length / totalDurationInSeconds * chunkDuration);
+
+
+        console.log(`Bytes per chunk: ${bytesPerChunk}`);
         const promises = [];
+
 
         for (let i = 0; i < chunks; i++) {
             const startByte = i * bytesPerChunk;
             const endByte = Math.min((i + 1) * bytesPerChunk, buffer.length);
 
+            console.log(`Chunk ${i}: Start Byte: ${startByte}, End Byte: ${endByte}`);
+
             if (startByte >= buffer.length || endByte > buffer.length) {
-                break; // Exit if the slice exceeds buffer length
+                console.log(`Chunk ${i} is out of buffer bounds.`);
+                break;
             }
 
             const audioChunk = buffer.slice(startByte, endByte);
             const chunkWavOutputPath = path.join(__dirname, `chunk-${job.data.userId}-${i}-${Date.now()}.wav`);
+            console.log(`Chunk ${i} size: ${audioChunk.length} bytes`);
 
-            // Create a promise for each chunk processing
             const promise = (async () => {
-                await convertToWav(audioChunk, chunkWavOutputPath);
+                await convertToWav(audioChunk, job.data.userId, chunkWavOutputPath);
                 const chunkTranscription = await fromFile(chunkWavOutputPath);
 
                 if (!chunkTranscription) {
                     logError(`Transcription failed for chunk ${i}`, path.basename(__filename));
                     failedChunks++;
-                    return; // Skip further processing for this chunk
+                } else {
+                    combinedTranscription.push(chunkTranscription);
                 }
 
-                combinedTranscription.push(chunkTranscription);
-
-                await fs.unlink(chunkWavOutputPath).catch(err => {
+                // Always delete the chunk file, regardless of the transcription success or failure
+                try {
+                    await fs.unlink(chunkWavOutputPath);
+                    console.log(`Deleted chunk file: ${chunkWavOutputPath}`);
+                } catch (err) {
                     logError(`Error deleting chunk file: ${chunkWavOutputPath}. Error: ${err.message}`, path.basename(__filename));
-                });
+                }
             })();
 
-            // Push the promise to the array
             promises.push(promise);
         }
 
-        // Wait for all promises to resolve
+        // Await all promises to ensure all chunks are processed
         await Promise.all(promises);
-        if (failedChunks > chunks / 2) {
-            throw new Error(`Too many chunks failed transcription: ${failedChunks} out of ${chunks}`);
-        }
-
         const combinedText = combinedTranscription.join(" ");
-        console.log("Combined Transcription:", combinedText);
+
+
         let { title, content, tag } = await generateBlogFromText(combinedText);
 
         let retry = 2;
@@ -113,7 +136,6 @@ transcriptionQueue.process(async (job) => {
 
         if (title === 'Error') {
             logError("Failed to generate blog after multiple attempts.", path.basename(__filename));
-            //await sendFailureEmail(job.data.userPlan.user.email, job.data.userPlan.user.name);
             return 'Failed to generate blog after multiple attempts.';
         }
 
@@ -142,44 +164,22 @@ transcriptionQueue.process(async (job) => {
                 }),
             ]);
         } catch (transactionError) {
-            logError("Failed to update database after transaction", path.basename(__filename));
+            logError(`Failed to update database after transaction: ${transactionError.message}`, path.basename(__filename));
             throw transactionError; // Ensure to throw the error to handle it later
         }
 
         await sendBlogReadyEmail(job.data.userPlan.user.email, job.data.userPlan.user.name, title);
 
-
-
-
     } catch (error) {
-        logError(error.message, path.basename(__filename));
+        logError(error.message, path.basename(__filename), "inside redis configuration");
         throw error; // Propagate the error
-    } finally {
-        // Cleanup original audio file
-        try {
-            await fs.access(job.data.audioPath);
-            await fs.unlink(job.data.audioPath);
-            console.log("Temporary audio file deleted successfully.");
-        } catch (cleanupError) {
-            if (cleanupError.code === 'ENOENT') {
-                logInfo(`Temporary audio file already deleted: ${job.data.audioPath}`, path.basename(__filename));
-            } else {
-                logError("Error deleting temporary audio file: " + cleanupError.message, path.basename(__filename));
-            }
-        }
     }
 });
-transcriptionQueue.on('failed', async (job, err) => {
-    console.log('Job failed:', job.id);
-    console.log('Job data:', job.data); // Log the entire job data
 
-    try {
-        await cleanupAudioFile(job.data.audioPath);
-        await sendFailureEmail(job.data.userPlan.user.email, job.data.userPlan.user.name);
-    } catch (error) {
-        console.error('Error in failed job handler:', error);
-    }
-});
+
+
+
+
 
 
 async function getQueueStats() {
@@ -198,18 +198,19 @@ async function getFailedJobs() {
         console.log(`Failed Job ID: ${job.id}`);
         console.log(`Job Data:`, job.data); // Log job data
         console.log(`Error Reason:`, job.failedReason);
-        await cleanupAudioFile(job.data.audioPath);
-        await job.remove()// Log the reason for failure
-    });
+        await cleanupAudioFile(job.data.audioPath)
+
+        await job.remove()// Log the reason for failure   });
+
+    })
 
 }
-
-// Call the function to log failed jobs
 
 
 
 setInterval(() => {
     getQueueStats();
     getFailedJobs()
+
 }, 5000)
 export default transcriptionQueue;

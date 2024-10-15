@@ -12,6 +12,7 @@ import transcribeAudioAPI from '../../voice_to_text/spechTranscription.js';
 import { generateBlogFromText } from '../../voice_to_text/blogGeneration.js';
 import sendBlogReadyEmail, { sendFailureEmail } from '../utility/email.js';
 import transcriptionQueue from '../utility/RedisConfiguration.js';
+import { v4 as uuidv4 } from 'uuid';
 
 
 const prisma = new PrismaClient();
@@ -40,6 +41,96 @@ const getAudioDuration = async (audioBuffer) => {
 
         await fs.unlink(tempFilePath);
     }
+};
+
+
+
+
+
+
+const checkUserPlan = async (userId) => {
+    const userPlan = await prisma.subscription.findFirst({
+        where: {
+            userId: userId,
+            remainingPosts: {
+                gt: 0
+            },
+            status: 'ACTIVE'
+        },
+        select: {
+            plan: true,
+            user: {
+                select: {
+                    email: true,
+                    name: true
+                }
+            }
+        }
+
+    });
+
+    if (!userPlan) return null;
+
+    return userPlan;
+};
+export const convertToWav = async (buffer, userId, outputPath) => {
+    let tempFilePath = null;
+    try {
+        tempFilePath = path.join(__dirname, `temp-audio-${userId}-${Date.now()}.mp3`);
+
+
+
+
+        await fs.writeFile(tempFilePath, buffer);
+
+
+        return new Promise((resolve, reject) => {
+            ffmpeg(tempFilePath)
+                .toFormat('wav')
+                .on('end', async () => {
+                    await fs.unlink(tempFilePath);
+                    console.log("wav converted")
+                    resolve({ outputPath, tempFilePath });
+                })
+                .on('error', async (err) => {
+
+                    if (tempFilePath) {
+                        await fs.unlink(tempFilePath).catch(unlinkError => {
+                            console.error("Failed to delete temporary file during error:", unlinkError);
+                        });
+                    }
+                    reject(new Error('WAV conversion failed.'));
+                })
+                .save(outputPath);
+
+        });
+    } catch (error) {
+
+        await fs.unlink(tempFilePath);
+        throw new Error('WAV conversion failed.');
+    }
+};
+
+const deleteFileWithRetry = (filePath, retries = 3, delay = 1000) => {
+    return new Promise((resolve, reject) => {
+        const attemptDelete = (attempt) => {
+            fs.unlink(filePath, (err) => {
+                if (err) {
+                    if (attempt < retries) {
+                        console.error(`Failed to delete file: ${filePath}, Attempt ${attempt + 1} of ${retries}, Error: ${err.message}. Retrying in ${delay} ms...`);
+                        setTimeout(() => attemptDelete(attempt + 1), delay); // Retry after delay
+                    } else {
+                        console.error(`Failed to delete file after ${retries} attempts: ${filePath}`);
+                        reject(err); // Give up after the maximum number of retries
+                    }
+                } else {
+                    console.log(`Deleted temporary file: ${filePath}`);
+                    resolve(); // Successfully deleted
+                }
+            });
+        };
+        attemptDelete(0); // Start the first attempt
+    });
 };
 
 const extractAudioFromVideo = async (videoBuffer, userId) => {
@@ -80,101 +171,11 @@ const extractAudioFromVideo = async (videoBuffer, userId) => {
 };
 
 
-
-
-const checkUserPlan = async (userId) => {
-    const userPlan = await prisma.subscription.findFirst({
-        where: {
-            userId: userId,
-            remainingPosts: {
-                gt: 0
-            },
-            status: 'ACTIVE'
-        },
-        select: {
-            plan: true,
-            user: {
-                select: {
-                    email: true,
-                    name: true
-                }
-            }
-        }
-
-    });
-
-    if (!userPlan) return null;
-
-    return userPlan;
-};
-export const convertToWav = async (buffer, outputPath) => {
-    let tempFilePath = null;
-    try {
-        tempFilePath = path.join(__dirname, `temp-audio-${Date.now()}.mp3`);
-
-
-
-
-        await fs.writeFile(tempFilePath, buffer);
-
-
-        return new Promise((resolve, reject) => {
-            ffmpeg(tempFilePath)
-                .toFormat('wav')
-                .on('end', async () => {
-                    await fs.unlink(tempFilePath);
-                    console.log("wav converted")
-                    resolve({ outputPath, tempFilePath });
-                })
-                .on('error', async (err) => {
-
-                    if (tempFilePath) {
-                        await fs.unlink(tempFilePath).catch(unlinkError => {
-                            console.error("Failed to delete temporary file during error:", unlinkError);
-                        });
-                    }
-                    reject(new Error('WAV conversion failed.'));
-                })
-                .save(outputPath);
-
-        });
-    } catch (error) {
-
-        //  await fs.unlink(tempFilePath);
-        throw new Error('WAV conversion failed.');
-    }
-};
-
-const deleteFileWithRetry = (filePath, retries = 3, delay = 1000) => {
-    return new Promise((resolve, reject) => {
-        const attemptDelete = (attempt) => {
-            fs.unlink(filePath, (err) => {
-                if (err) {
-                    if (attempt < retries) {
-                        console.error(`Failed to delete file: ${filePath}, Attempt ${attempt + 1} of ${retries}, Error: ${err.message}. Retrying in ${delay} ms...`);
-                        setTimeout(() => attemptDelete(attempt + 1), delay); // Retry after delay
-                    } else {
-                        console.error(`Failed to delete file after ${retries} attempts: ${filePath}`);
-                        reject(err); // Give up after the maximum number of retries
-                    }
-                } else {
-                    console.log(`Deleted temporary file: ${filePath}`);
-                    resolve(); // Successfully deleted
-                }
-            });
-        };
-        attemptDelete(0); // Start the first attempt
-    });
-};
-
-
-
-
 export const recordTranscription = async (req, res) => {
     const { userId } = req;
     logInfo(`Starting audio transcription process for user ${userId}`, path.basename(__filename));
 
-    const tempFileName = `output-${userId}-${Date.now()}.mp3`;
+    const tempFileName = `output-${userId}-${Date.now()}-${uuidv4()}.mp3`;
     const audioPath = path.join(__dirname, tempFileName); // Path where audio will be saved
 
     let fileWritten = false;
@@ -231,20 +232,27 @@ export const recordTranscription = async (req, res) => {
             return res.status(400).json({ message: `Your plan allows a maximum of ${maxAllowedDuration / 60} minutes of audio` });
         }
 
-        // Write the audio file to disk
+
+
 
         await fs.writeFile(audioPath, audioBuffer);
-        await fs.access(audioPath);
-        fileWritten = true;
+        try {
+            await fs.access(audioPath);
 
-        console.log("here")
+            console.log("file accessible")
+        } catch (error) {
+            return res.status(400).json({ message: "something error occured during transcription" })
+        }
 
-        // Add transcription task to queue
+
+
+
+
         const job = await transcriptionQueue.add(
             { userId, audioPath, audioDuration, userPlan },
-            { attempts: 1, removeOnComplete: true, backoff: 5000 }
+            { attempts: 1, removeOnComplete: true, }
         );
-        console.log(job);
+        console.log(`Job created: ${job.id}`);
         if (!job) {
             throw new Error("Failed to add job to the transcription queue");
         }
@@ -254,6 +262,7 @@ export const recordTranscription = async (req, res) => {
 
     } catch (error) {
         logError(error, path.basename(__filename), 'Error in transcription process');
+        console.log(error)
 
         // Handle cleanup only if the file was written successfully
         if (fileWritten) {
@@ -285,6 +294,8 @@ const cleanupAudioFile = async (audioPath) => {
 // Event listeners for queue job completion and failure
 transcriptionQueue.on('completed', async (job) => {
     try {
+
+        console.log("job completed")
         // Check if the file exists before attempting to clean up
         await fs.access(job.data.audioPath);
         await cleanupAudioFile(job.data.audioPath); // Clean up if the file exists
@@ -299,17 +310,7 @@ transcriptionQueue.on('completed', async (job) => {
     }
 });
 
-transcriptionQueue.on('failed', async (job, err) => {
-    console.log('Job failed:', job.id);
-    console.log('Job data:', job.data); // Log the entire job data
 
-    try {
-        // await cleanupAudioFile(job.data.audioPath);
-        // await sendFailureEmail(job.data.userPlan.user.email, job.data.userPlan.user.name);
-    } catch (error) {
-        console.error('Error in failed job handler:', error);
-    }
-});
 export { cleanupAudioFile }
 
 
