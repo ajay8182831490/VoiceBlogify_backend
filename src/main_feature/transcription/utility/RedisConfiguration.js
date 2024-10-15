@@ -208,9 +208,9 @@ async function getFailedJobs() {
 
 
 
-setInterval(() => {
+/*setInterval(() => {
     getQueueStats();
     getFailedJobs()
 
-}, 5000)
+}, 5000)*/
 export default transcriptionQueue;
