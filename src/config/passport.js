@@ -112,7 +112,7 @@ passport.use(new GoogleStrategy({
           userId: user.id,
           plan: 'FREE',
 
-          status: 'ACTIVE'
+          status: 'ACTIVE',
        
           
           startDate: new Date(),
