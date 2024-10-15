@@ -2,7 +2,7 @@ import Bull from 'bull';
 import Redis from 'ioredis';
 import dotenv from 'dotenv';
 dotenv.config();
-import { convertToWav, transcribeAudio } from '../controller/transcriptionController.js';
+import { convertToWav } from '../controller/transcriptionController.js';
 import transcribeAudioAPI from '../../voice_to_text/spechTranscription.js';
 import { generateBlogFromText } from '../../voice_to_text/blogGeneration.js';
 import sendBlogReadyEmail from './email.js';
@@ -11,10 +11,15 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { logInfo, logError } from '../../../utils/logger.js';
 import { promises as fs } from 'fs';
+import { fromFile } from '../../voice_to_text/spechTranscription.js';
+import { PrismaClient } from '@prisma/client';
+import { cleanupAudioFile } from '../controller/transcriptionController.js';
+
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient()
+
+const prisma = new PrismaClient();
 
 const redisOptions = {
     host: 'redis-18961.c330.asia-south1-1.gce.redns.redis-cloud.com',
@@ -26,40 +31,40 @@ const redisOptions = {
 
 const redis = new Redis(redisOptions);
 
+
 const transcriptionQueue = new Bull('transcriptionQueue', {
     redis: redisOptions,
+    limiter: {
+        max: 10, // Max number of jobs to process in parallel
+        duration: 1000, // Duration in milliseconds
+    },
 });
 
 transcriptionQueue.process(async (job) => {
-    const tempFileName = `output-${job.data.userId}-${Date.now()}.wav`;
-    const wavOutputPath = path.join(__dirname, tempFileName);
-    console.log(job.data)
+    logInfo(`Processing background task for user ${job.data.userId}`, path.basename(__filename));
 
+    /*if (job.attemptsMade >= job.opts.attempts) {
+        await cleanupAudioFile(job.data.audioPath);
+    }*/
 
-
-
-
-    logInfo(`going to process backround for user ${job.data.userId}`, path.basename(__filename))
+    const combinedTranscription = [];
+    let failedChunks = 0;
 
     try {
+        const audioPath = path.resolve(__dirname, job.data.audioPath);
+        console.log(audioPath);
 
 
-
-        const buffer = await fs.readFile(job.data.audioPath);
-
-
-        await convertToWav(buffer, wavOutputPath);
-        const userSelectedLanguage = job.data.language || 'en-US';
-
+        try {
+            await fs.access(audioPath)
+        } catch (error) {
+            console.log("path not accesssile")
+        }
 
 
-        //console.log("chunks", chunks);
-        let combinedTranscription = `Main aaj ek anokhi kahani sunana chahta hoon. Is kahani ka naam hai 'Dosti ki Shakti'. Ek baar ek chhote se gaon mein do doston ka naam tha Ravi aur Sameer. Dono bachpan se saath the aur har mushkil waqt mein ek dusre ka saath dete the.
-
-Ek din, unhone socha ki wo ek naya vyavsay shuru karenge.Unhone mil kar ek choti si bakery kholi, jahan unhone apne haath se banaye hue pastriyaan aur mithaiyan bechne lage.Doston ki dosti aur mehnat se unka vyavsay safal hua.
-
-Is kahani se humein yeh sikhne ko milta hai ki dosti aur mehnat se koi bhi sapna sach ho sakta hai.Doston ki saath hona zindagi ka sabse bada dhan hai.`;
-
+        const buffer = await fs.readFile(audioPath);
+        console.log(buffer)
+        //const userSelectedLanguage = job.data.language || 'en-US';
 
 
 
@@ -72,6 +77,7 @@ Is kahani se humein yeh sikhne ko milta hai ki dosti aur mehnat se koi bhi sapna
 
 
         console.log(`Bytes per chunk: ${bytesPerChunk}`);
+        const promises = [];
 
 
         for (let i = 0; i < chunks; i++) {
@@ -86,135 +92,125 @@ Is kahani se humein yeh sikhne ko milta hai ki dosti aur mehnat se koi bhi sapna
             }
 
             const audioChunk = buffer.slice(startByte, endByte);
+            const chunkWavOutputPath = path.join(__dirname, `chunk-${job.data.userId}-${i}-${Date.now()}.wav`);
             console.log(`Chunk ${i} size: ${audioChunk.length} bytes`);
-            const chunkTranscription = await transcribeAudioAPI(audioChunk, userSelectedLanguage);
 
-            //combinedTranscription += chunkTranscription + " ";
+            const promise = (async () => {
+                await convertToWav(audioChunk, job.data.userId, chunkWavOutputPath);
+                const chunkTranscription = await fromFile(chunkWavOutputPath);
 
+                if (!chunkTranscription) {
+                    logError(`Transcription failed for chunk ${i}`, path.basename(__filename));
+                    failedChunks++;
+                } else {
+                    combinedTranscription.push(chunkTranscription);
+                }
+
+                // Always delete the chunk file, regardless of the transcription success or failure
+                try {
+                    await fs.unlink(chunkWavOutputPath);
+                    console.log(`Deleted chunk file: ${chunkWavOutputPath}`);
+                } catch (err) {
+                    logError(`Error deleting chunk file: ${chunkWavOutputPath}. Error: ${err.message}`, path.basename(__filename));
+                }
+            })();
+
+            promises.push(promise);
         }
 
-        // Process the audioChunk...
+        // Await all promises to ensure all chunks are processed
+        await Promise.all(promises);
+        const combinedText = combinedTranscription.join(" ");
 
 
-
-
-        const { title, content, tag } = await generateBlogFromText(combinedTranscription);
-
+        let { title, content, tag } = await generateBlogFromText(combinedText);
 
         let retry = 2;
-        let errorOccurred = false;
+        while (title === 'Error' && retry-- > 0) {
+            console.log("Retrying blog generation...");
+            const result = await generateBlogFromText(combinedText);
+            title = result.title;
+            content = result.content;
+            tag = result.tag;
+        }
 
         if (title === 'Error') {
-            while (retry-- > 0) {
-                console.log("Retrying blog generation...");
-                const result = await generateBlogFromText(combinedTranscription);
-                const { title: retryTitle, content: retryContent, tag: retryTag } = result;
-
-                if (retryTitle !== 'Error') {
-
-                    title = retryTitle;
-                    content = retryContent;
-                    tag = retryTag;
-                    errorOccurred = false;
-                    break;
-                }
-
-                errorOccurred = true;
-            }
+            logError("Failed to generate blog after multiple attempts.", path.basename(__filename));
+            return 'Failed to generate blog after multiple attempts.';
         }
 
-        if (errorOccurred) {
-            logError("Failed to generate blog after multiple attempts.", path.basename(__filename))
-            await sendFailureEmail(job.data.userPlan.user.email, job.data.userPlan.user.name);
-            return ('Failed to generate blog after multiple attempts.');
-        } else {
+        const userId = job.data.userId;
 
+        // Create a new post in the database
+        await prisma.post.create({
+            data: {
+                userId: userId,
+                title: title,
+                tags: tag,
+                content: content,
+            },
+        });
 
-            const userId = job.data.userId;
-
-
-            await prisma.post.create({
-                data: {
-                    userId: userId,
-                    title: title,
-                    tags: tag,
-                    content: content
-                }
-            });
-
-
-            const blogCountIncrement = 1;
-            try {
-                await prisma.$transaction([
-                    prisma.user.update({
-                        where: { id: userId },
-                        data: { blogCount: { increment: blogCountIncrement } }
-                    }),
-                    prisma.subscription.update({
-                        where: { userId: userId },
-                        data: { remainingPosts: { decrement: 1 } }
-                    })
-                ]);
-            } catch (transactionError) {
-
-
-
-                try {
-                    await prisma.$transaction([
-                        prisma.user.update({
-                            where: { id: userId },
-                            data: { blogCount: { increment: blogCountIncrement } }
-                        }),
-                        prisma.subscription.update({
-                            where: { userId: userId },
-                            data: { remainingPosts: { decrement: 1 } }
-                        })
-                    ]);
-                } catch (retryError) {
-
-                    logError("Failed to update database after retry", path.basename(__filename));
-                    throw retryError;
-                }
-            }
+        const blogCountIncrement = 1;
+        try {
+            await prisma.$transaction([
+                prisma.user.update({
+                    where: { id: userId },
+                    data: { blogCount: { increment: blogCountIncrement } },
+                }),
+                prisma.subscription.update({
+                    where: { userId: userId },
+                    data: { remainingPosts: { decrement: 1 } },
+                }),
+            ]);
+        } catch (transactionError) {
+            logError(`Failed to update database after transaction: ${transactionError.message}`, path.basename(__filename));
+            throw transactionError; // Ensure to throw the error to handle it later
         }
+
         await sendBlogReadyEmail(job.data.userPlan.user.email, job.data.userPlan.user.name, title);
 
-
-
-
-        return {}
-
-
-
-
     } catch (error) {
-        logError(error, path.basename(__filename));
-        throw error;
-    } finally {
-
-        try {
-            await fs.unlink(wavOutputPath);
-            await fs.unlink(job.data.audioPath);
-            console.log("Temporary files deleted successfully.");
-        } catch (cleanupError) {
-            logError("Error deleting temporary files:" + cleanupError, path.basename(__filename));
-        }
+        logError(error.message, path.basename(__filename), "inside redis configuration");
+        throw error; // Propagate the error
     }
 });
-// transcriptionQueue.on('completed', (job) => {
-//     console.log(`Job completed with result ${job.returnvalue}`);
-// });
 
 
 
-// transcriptionQueue.on('progress', (job, progress) => {
-//     console.log(`Job ${job.id} progress: ${progress}%`);
-// });
-transcriptionQueue.on('failed', (job, err) => {
-    console.error(`Job ${job.id} failed:`, err);
-
-    sendFailureEmail(job.data.userPlan.user.email, job.data.userPlan.user.name,);
-})
 
 
+
+
+async function getQueueStats() {
+    const waiting = await transcriptionQueue.getWaitingCount();
+    const active = await transcriptionQueue.getActiveCount();
+    const completed = await transcriptionQueue.getCompletedCount();
+    const failed = await transcriptionQueue.getFailedCount();
+
+    console.log(`Queue Stats - Waiting: ${waiting}, Active: ${active}, Completed: ${completed}, Failed: ${failed}`);
+}
+async function getFailedJobs() {
+    const failedJobs = await transcriptionQueue.getFailed();
+    console.log(`Total Failed Jobs: ${failedJobs.length}`);
+
+    failedJobs.forEach(async (job) => {
+        console.log(`Failed Job ID: ${job.id}`);
+        console.log(`Job Data:`, job.data); // Log job data
+        console.log(`Error Reason:`, job.failedReason);
+        await cleanupAudioFile(job.data.audioPath)
+
+        await job.remove()// Log the reason for failure   });
+
+    })
+
+}
+
+
+
+setInterval(() => {
+    getQueueStats();
+    getFailedJobs()
+
+}, 5000)
 export default transcriptionQueue;

@@ -12,11 +12,13 @@ import transcribeAudioAPI from '../../voice_to_text/spechTranscription.js';
 import { generateBlogFromText } from '../../voice_to_text/blogGeneration.js';
 import sendBlogReadyEmail, { sendFailureEmail } from '../utility/email.js';
 import transcriptionQueue from '../utility/RedisConfiguration.js';
+import { v4 as uuidv4 } from 'uuid';
 
 
 const prisma = new PrismaClient();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
 
 const getAudioDuration = async (audioBuffer) => {
 
@@ -41,54 +43,10 @@ const getAudioDuration = async (audioBuffer) => {
     }
 };
 
-const extractAudioFromVideo = async (videoBuffer, userId) => {
-    const videoPath = path.join(__dirname, `${userId}tempVideo.mp4`);
-    const audioPath = path.join(__dirname, `${userId}tempAudio.mp3`);
-
-    try {
-
-        await fs.writeFile(videoPath, videoBuffer);
-
-
-        await new Promise((resolve, reject) => {
-            ffmpeg(videoPath)
-                .output(audioPath)
-                .on('end', () => {
-                    console.log("audio extract")
-                    resolve();
-                })
-                .on('error', (err) => {
-                    //console.error('Error during audio extraction:', err);
-                    reject(err);
-                })
-                .run();
-        });
-
-
-        const audioBuffer = await fs.readFile(audioPath);
-
-
-        await fs.unlink(videoPath);
-        await fs.unlink(audioPath);
-
-        return audioBuffer;
-    } catch (error) {
-
-        throw error;
-    }
-};
 
 
 
-export const transcribeAudio = async (audioChunk, userSelectedLanguage) => {
-    try {
-        const transcription = await transcribeAudioAPI(audioChunk, userSelectedLanguage);
-        return transcription.text || "";
-    } catch (error) {
-        console.error("Error transcribing audio:", error);
-        return "";
-    }
-};
+
 
 const checkUserPlan = async (userId) => {
     const userPlan = await prisma.subscription.findFirst({
@@ -115,10 +73,10 @@ const checkUserPlan = async (userId) => {
 
     return userPlan;
 };
-export const convertToWav = async (buffer, outputPath) => {
+export const convertToWav = async (buffer, userId, outputPath) => {
     let tempFilePath = null;
     try {
-        tempFilePath = path.join(__dirname, `temp-audio-${Date.now()}.mp3`);
+        tempFilePath = path.join(__dirname, `temp-audio-${userId}-${Date.now()}.mp3`);
 
 
 
@@ -131,6 +89,7 @@ export const convertToWav = async (buffer, outputPath) => {
                 .toFormat('wav')
                 .on('end', async () => {
                     await fs.unlink(tempFilePath);
+                    console.log("wav converted")
                     resolve({ outputPath, tempFilePath });
                 })
                 .on('error', async (err) => {
@@ -174,245 +133,52 @@ const deleteFileWithRetry = (filePath, retries = 3, delay = 1000) => {
     });
 };
 
+const extractAudioFromVideo = async (videoBuffer, userId) => {
+    const videoPath = path.join(__dirname, `${userId}tempVideo.mp4`);
+    const audioPath = path.join(__dirname, `${userId}tempAudio.mp3`);
 
-
-/*export const recordTranscription = async (req, res) => {
-    const { userId } = req;
-    logInfo(`Starting audio transcription process for user ${userId}`, path.basename(__filename), recordTranscription);
-    const tempFileName = `output-${userId}-${Date.now()}.wav`;
-    const wavOutputPath = path.join(__dirname, tempFileName);
     try {
-        const file = req.file;
 
+        await fs.writeFile(videoPath, videoBuffer);
 
-        const fileType = file.mimetype;
-        let Buffer;
 
-        if (fileType.startsWith('audio/')) {
+        await new Promise((resolve, reject) => {
+            ffmpeg(videoPath)
+                .output(audioPath)
+                .on('end', () => {
+                    console.log("audio extract")
+                    resolve();
+                })
+                .on('error', (err) => {
+                    //console.error('Error during audio extraction:', err);
+                    reject(err);
+                })
+                .run();
+        });
 
-            Buffer = file.buffer;
 
-        } else if (fileType.startsWith('video/')) {
+        const audioBuffer = await fs.readFile(audioPath);
 
-            const videoBuffer = file.buffer;
 
+        await fs.unlink(videoPath);
+        await fs.unlink(audioPath);
 
-
-            Buffer = await extractAudioFromVideo(videoBuffer, userId);
-
-
-            if (!Buffer) return res.status(500).json({ message: "Audio extraction from video failed" });
-        } else {
-            return res.status(400).json({ message: "Unsupported file type" });
-        }
-
-
-
-
-
-
-
-        await convertToWav(Buffer, wavOutputPath);
-
-        await fs.access(wavOutputPath);
-        const wavBuffer = await fs.readFile(wavOutputPath);
-
-
-
-
-        const userPlan = await checkUserPlan(userId);
-
-        if (!userPlan) {
-            return res.status(403).json({ message: "No active subscription plan" });
-        }
-
-
-        let maxAllowedDuration;
-        switch (userPlan.plan) {
-            case "FREE":
-                maxAllowedDuration = 10 * 60;
-                break;
-            case "BASIC":
-                maxAllowedDuration = 20 * 60;
-                break;
-            case "PREMIUM":
-                maxAllowedDuration = 60 * 60;
-
-                break;
-            case "BUISNESS":
-                maxAllowedDuration = 90 * 60;
-                break;
-            default:
-                return res.status(400).json({ message: "Invalid user plan" });
-        }
-
-
-
-
-        const audioDuration = await getAudioDuration(wavBuffer, userId);
-
-
-        if (!audioDuration) {
-            return res.status(400).json({ message: "Unable to determine audio duration" });
-        }
-
-
-        if (audioDuration > maxAllowedDuration) {
-
-            return res.status(400).json({ message: `Your plan allows a maximum of ${maxAllowedDuration / 60} minutes of audio` });
-        }
-
-
-        const chunkDuration = 150;
-        const chunks = Math.ceil(audioDuration / chunkDuration);
-        let combinedTranscription = "";
-
-        const userSelectedLanguage = req.body.language || 'en-US';
-
-
-        for (let i = 0; i < chunks; i++) {
-            const start = i * chunkDuration;
-            const end = (i + 1) * chunkDuration > audioDuration ? audioDuration : (i + 1) * chunkDuration;
-
-
-            const audioChunk = Buffer.slice(start * 44100 * 2, end * 44100 * 2);
-            const chunkTranscription = await transcribeAudioAPI(audioChunk, userSelectedLanguage);
-
-            combinedTranscription += chunkTranscription + " ";
-        }
-        combinedTranscription = combinedTranscription.trim();
-        const { title, content, tag } = await generateBlogFromText(combinedTranscription);
-
-        let retry = 2;
-        let errorOccurred = false;
-
-
-        if (title === 'Error') {
-            while (retry-- > 0) {
-                const result = await generateBlogFromText(combinedTranscription);
-
-
-                const { title, content, tag } = result;
-
-
-                if (title !== 'Error') {
-                    break;
-                }
-
-                errorOccurred = true;
-            }
-        }
-
-
-        if (errorOccurred) {
-
-            sendFailureEmail(userPlan.email, userPlan.name)
-            return ('Failed to generate blog after multiple attempts.');
-
-        } else {
-
-
-
-            const tryagain = 1
-
-            await prisma.post.create({
-                data: {
-                    userId: userId,
-                    title: title,
-                    tags: tag,
-                    content: content
-                }
-            })
-
-            const blogCountIncrement = 1;
-            try {
-
-                await prisma.$transaction([
-
-                    prisma.user.update({
-                        where: {
-                            id: userId
-                        },
-                        data: {
-                            blogCount: {
-                                increment: blogCountIncrement
-                            }
-                        }
-                    }),
-
-                    prisma.subscription.update({
-                        where: {
-                            userId: userId
-                        }, data: {
-                            remainingPosts: {
-                                decrement: 1
-                            }
-                        }
-                    })
-                ]);
-
-
-            } catch (error) {
-
-                while (tryagain--) {
-                    await prisma.$transaction([
-
-                        prisma.user.update({
-                            where: {
-                                id: userId
-                            },
-                            data: {
-                                blogCount: {
-                                    increment: blogCountIncrement
-                                }
-                            }
-                        }),
-
-                        prisma.subscription.update({
-                            where: {
-                                userId: userId
-                            }, data: {
-                                remainingPosts: {
-                                    decrement: 1
-                                }
-                            }
-                        })
-                    ]);
-
-                }
-
-            }
-
-            await sendBlogReadyEmail(userPlan.email, userPlan.name, title);
-
-
-
-
-            res.status(200).json({ message: "Audio file transcribed successfully" });
-        }
-
+        return audioBuffer;
     } catch (error) {
-        logError(error, path.basename(__filename));
-        res.status(500).json({ message: "Internal server error" });
+
+        throw error;
     }
-    finally {
-        if (wavOutputPath) {
-            try {
-                await deleteFileWithRetry(wavOutputPath);
-            } catch (err) {
-                logError("error occured during deleting the waveoutput file", path.basename(__filename), wavOutputPath);
-            }
-        }
-    }
-};*/
+};
 
 
 export const recordTranscription = async (req, res) => {
     const { userId } = req;
     logInfo(`Starting audio transcription process for user ${userId}`, path.basename(__filename));
 
-    const tempFileName = `output-${userId}-${Date.now()}.mp3`;
+    const tempFileName = `output-${userId}-${Date.now()}-${uuidv4()}.mp3`;
     const audioPath = path.join(__dirname, tempFileName); // Path where audio will be saved
+
+    let fileWritten = false;
 
     try {
         const file = req.file;
@@ -420,33 +186,14 @@ export const recordTranscription = async (req, res) => {
         let audioBuffer;
         let audioDuration;
 
-
-        return res.status(200).json({ message: "once the project is completed we will notify" })
-
-
-
-
-
-
-
-
-
         // Determine file type and handle accordingly
         if (fileType.startsWith('audio/')) {
-
-
-
             audioBuffer = file.buffer;
-
             audioDuration = await getAudioDuration(audioBuffer, req.file.mimetype, userId);
-
-
         } else if (fileType.startsWith('video/')) {
             const videoBuffer = file.buffer;
-
             audioBuffer = await extractAudioFromVideo(videoBuffer, userId);
             audioDuration = await getAudioDuration(audioBuffer, req.file.mimetype, userId);
-
 
             if (!audioBuffer) return res.status(500).json({ message: "Audio extraction from video failed" });
         } else {
@@ -487,37 +234,84 @@ export const recordTranscription = async (req, res) => {
 
 
 
+
         await fs.writeFile(audioPath, audioBuffer);
+        try {
+            await fs.access(audioPath);
 
-        console.log("now ready to insert");
+            console.log("file accessible")
+        } catch (error) {
+            return res.status(400).json({ message: "something error occured during transcription" })
+        }
 
 
 
-        await transcriptionQueue.add({ userId, audioPath, audioDuration, userPlan }, { attempts: 2, removeOnComplete: true, removeOnFail: true });
-        console.log("added into the queue");
 
+
+        const job = await transcriptionQueue.add(
+            { userId, audioPath, audioDuration, userPlan },
+            { attempts: 1, removeOnComplete: true, }
+        );
+        console.log(`Job created: ${job.id}`);
+        if (!job) {
+            throw new Error("Failed to add job to the transcription queue");
+        }
 
 
         res.status(200).json({ message: "Processing started, you'll be notified via email once it's done." });
 
     } catch (error) {
+        logError(error, path.basename(__filename), 'Error in transcription process');
+        console.log(error)
 
-        try {
+        // Handle cleanup only if the file was written successfully
+        if (fileWritten) {
+            try {
+                await fs.access(audioPath);
 
-            await fs.access(audioPath); // Check if the file exists
-            await fs.unlink(audioPath);  // Delete the file if it exists
-        } catch (cleanupError) {
+                await fs.unlink(audioPath);
 
-            logError(cleanupError, path.basename(__filename), 'File cleanup error');
+            } catch (cleanupError) {
+                logError(cleanupError, path.basename(__filename), 'File access error during cleanup attempt');
+            }
         }
 
-
-        logError(error, path.basename(__filename), recordTranscription);
         res.status(500).json({ message: "Internal server error" });
     }
-
 };
 
+// Cleanup function for audio files
+const cleanupAudioFile = async (audioPath) => {
+    try {
+        await fs.access(audioPath);
+        await fs.unlink(audioPath);
+        logInfo(`Cleaned up audio file: ${audioPath}`, path.basename(__filename));
+    } catch (cleanupError) {
+        logError(cleanupError, path.basename(__filename), 'Cleanup error');
+    }
+};
+
+// Event listeners for queue job completion and failure
+transcriptionQueue.on('completed', async (job) => {
+    try {
+
+        console.log("job completed")
+        // Check if the file exists before attempting to clean up
+        await fs.access(job.data.audioPath);
+        await cleanupAudioFile(job.data.audioPath); // Clean up if the file exists
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            // File does not exist, log this but do not throw an error
+            console.log(`Audio file already deleted or does not exist: ${job.data.audioPath}`);
+        } else {
+            // Log other errors without stopping the transcription process
+            console.error(`Error accessing audio file: ${error.message}`);
+        }
+    }
+});
+
+
+export { cleanupAudioFile }
 
 
 

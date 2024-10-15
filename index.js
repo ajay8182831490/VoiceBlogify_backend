@@ -16,7 +16,7 @@ import bloggerRoutes from './src/blogger/routes/bloggerRoutes.js';
 import userRouter from './src/user/Routes/userRoutes.js';
 import paypalpayment from './src/subscription/payment/controller/PaymentController.js';
 import helmet from 'helmet';
-//import csurf from 'csurf'; // Import CSRF protection
+import csurf from 'csurf'; 
 
 dotenv.config();
 
@@ -27,6 +27,7 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(helmet()); // Apply Helmet for security headers
+
 app.set('trust proxy', 1); 
 // Content Security Policy (CSP) Configuration
 const cspConfig = {
@@ -39,15 +40,18 @@ const cspConfig = {
     fontSrc: ["'self'", "https:", "data:"],  // Allow fonts from your domain and data URIs
     objectSrc: ["'none'"],  // Prevent plugins (like Flash) from being used
     upgradeInsecureRequests: [],  // Automatically upgrade HTTP requests to HTTPS
+
   },
 };
 app.use(helmet.contentSecurityPolicy(cspConfig));
+
 
 
 // Security headers for protection against XSS, clickjacking, etc.
 app.use(helmet.noSniff());  // X-Content-Type-Options: nosniff
 app.use(helmet.frameguard({ action: 'deny' }));  // X-Frame-Options: DENY (Clickjacking protection)
 app.use(helmet.xssFilter());  // X-XSS-Protection header for XSS protection
+
 app.use(helmet.hsts({
   maxAge: 31536000,  // 1 year
   includeSubDomains: true,
@@ -79,11 +83,13 @@ mongoose.connect(mongoUrl)
   .then(() => console.log('Connected to MongoDB'))
   .catch((err) => console.error('MongoDB connection error:', err));
 
+
 const MongoDBStore = connectMongoDBSession(session);
 const store = new MongoDBStore({
   uri: mongoUrl,
   collection: 'mySessions',
 });
+
 
 store.on('error', (error) => {
   console.error('Session store error:', error);
@@ -109,14 +115,21 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// CSRF protection (should come after session middleware)
-//const csrfProtection = csurf({ cookie: true });
-//app.use(csrfProtection);
 
-// Route for handling CSRF tokens in client-side requests
-/*app.get('/csrf-token', (req, res) => {
+
+const csrfProtection = csurf({ cookie: true });
+app.use(csrfProtection);
+
+//Route for handling CSRF tokens in client-side requests
+app.get('/csrf-token', (req, res) => {
   res.json({ csrfToken: req.csrfToken() });
-});*/
+
+
+
+
+// Keep-alive cron job to prevent server sleep
+
+
 
 // Define routes
 app.use(authRoutes);
@@ -139,6 +152,7 @@ const job = new CronJob('*/5 * * * *', async () => {
 });
 job.start();
 
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err);
@@ -152,4 +166,7 @@ const init = async () => {
   });
 };
 
+
 init();
+
+
