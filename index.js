@@ -117,13 +117,13 @@ app.use(passport.session());
 
 
 
-const csrfProtection = csurf({ cookie: true });
+/*const csrfProtection = csurf({ cookie: true });
 app.use(csrfProtection);
 
 //Route for handling CSRF tokens in client-side requests
 app.get('/csrf-token', (req, res) => {
   res.json({ csrfToken: req.csrfToken() });
-})
+})*/
 
 
 
