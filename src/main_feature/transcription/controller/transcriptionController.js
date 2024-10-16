@@ -173,7 +173,7 @@ const extractAudioFromVideo = async (videoBuffer, userId) => {
     }
 };
 function sanitizeFileName(fileName) {
-    return fileName.replace(/[^a-zA-Z0-9_\.]/g, ''); // Removes invalid characters, including '-'
+    return fileName.replace(/[^a-zA-Z0-9_\.]/g, '');
 }
 
 const addJobToQueue = async (userId, fileName, fileDuration, userPlan) => {
@@ -200,80 +200,13 @@ export const recordTranscription = async (req, res) => {
     logInfo(`Starting audio transcription process for user ${userId}`, path.basename(__filename), recordTranscription);
 
     // Generate a sanitized filename'
-    let tempFileName = `output-${userId}-${Date.now()}-${uuidv4()}.mp3`;
+    let tempFileName = `output-${userId}-${Date.now()}.mp3`;
     tempFileName = sanitizeFileName(tempFileName);
     const fileName = encodeURIComponent(tempFileName);
     let fileDuration = 150;
     const userPlan = await checkUserPlan(userId);
 
-    /*try {
-        const file = req.file;
-        const fileType = file.mimetype;
 
-
-
-
-        if (fileType.startsWith('audio/')) {
-            // Get audio duration directly from the file
-            fileDuration = await getAudioDuration(file.buffer, file.mimetype);
-        } else if (fileType.startsWith('video/')) {
-
-            fileDuration = await getAudioDuration(file.buffer, file.mimetype);
-        } else {
-            return res.status(400).json({ message: "Unsupported file type" });
-        }
-
-
-        const userPlan = await checkUserPlan(userId);
-        if (!userPlan) {
-            return res.status(403).json({ message: "No active subscription plan" });
-        }
-
-
-        let maxAllowedDuration;
-        switch (userPlan.plan) {
-            case "FREE":
-                maxAllowedDuration = 10 * 60; // 10 minutes
-                break;
-            case "BASIC":
-                maxAllowedDuration = 20 * 60; // 20 minutes
-                break;
-            case "PREMIUM":
-                maxAllowedDuration = 60 * 60; // 60 minutes
-                break;
-            case "BUSINESS":
-                maxAllowedDuration = 90 * 60; // 90 minutes
-                break;
-            default:
-                return res.status(400).json({ message: "Invalid user plan" });
-        }
-
-        if (!fileDuration) {
-            return res.status(400).json({ message: "Unable to determine file duration" });
-        }
-
-        if (fileDuration > maxAllowedDuration) {
-            return res.status(400).json({
-                message: `Your plan allows a maximum of ${maxAllowedDuration / 60} minutes of audio/video.`,
-            });
-        }
-
-        // If the file is a video, extract audio now
-        let audioBuffer;
-        if (fileType.startsWith('video/')) {
-            audioBuffer = await extractAudioFromVideo(file.buffer, userId);
-            if (!audioBuffer) {
-                return res.status(500).json({ message: "Audio extraction from video failed" });
-            }
-        } else {
-            // If it's already an audio file, use the buffer directly
-            audioBuffer = file.buffer;
-        }
-
-        // Upload buffer to storage
-        await uploadBuffer(userId, audioBuffer, fileName);
-
-        // Add transcription job to the queue*/
     try {
         console.log("before ", userId, fileName, fileDuration, userPlan)
         await addJobToQueue(userId, fileName, fileDuration, userPlan);
@@ -298,7 +231,7 @@ transcriptionQueue.on('completed', async (job) => {
     try {
 
         console.log("job completed")
-        await deleteBlob(job.data.userId, job.data.fileName)
+        // await deleteBlob(job.data.userId, job.data.fileName)
 
 
     } catch (error) {
@@ -307,7 +240,7 @@ transcriptionQueue.on('completed', async (job) => {
 });
 
 
-// export { cleanupAudioFile }
+
 
 
 
