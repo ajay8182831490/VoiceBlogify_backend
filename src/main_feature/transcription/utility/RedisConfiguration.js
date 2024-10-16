@@ -3,7 +3,7 @@ import Redis from 'ioredis';
 import dotenv from 'dotenv';
 dotenv.config();
 import { convertToWav } from '../controller/transcriptionController.js';
-import transcribeAudioAPI from '../../voice_to_text/spechTranscription.js';
+
 import { generateBlogFromText } from '../../voice_to_text/blogGeneration.js';
 import sendBlogReadyEmail from './email.js';
 import { sendFailureEmail } from './email.js';
@@ -13,7 +13,8 @@ import { logInfo, logError } from '../../../utils/logger.js';
 import { promises as fs } from 'fs';
 import { fromFile } from '../../voice_to_text/spechTranscription.js';
 import { PrismaClient } from '@prisma/client';
-import { cleanupAudioFile } from '../controller/transcriptionController.js';
+
+import { downloadBlob, deleteBlob } from './Storage.js';
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -34,46 +35,101 @@ const redis = new Redis(redisOptions);
 
 const transcriptionQueue = new Bull('transcriptionQueue', {
     redis: redisOptions,
-    limiter: {
-        max: 10, // Max number of jobs to process in parallel
-        duration: 1000, // Duration in milliseconds
-    },
+
 });
 
 transcriptionQueue.process(async (job) => {
-    logInfo(`Processing background task for user ${job.data.userId}`, path.basename(__filename));
+    console.log('Received job:', JSON.stringify(job, null, 2));
 
-    /*if (job.attemptsMade >= job.opts.attempts) {
-        await cleanupAudioFile(job.data.audioPath);
-    }*/
+    if (!job) {
+        console.error('Job object is undefined');
+        throw new Error('Job object is undefined');
+    }
 
-    const combinedTranscription = [];
-    let failedChunks = 0;
+    if (typeof job !== 'object') {
+        console.error('Job is not an object:', typeof job);
+        throw new Error('Job is not an object');
+    }
+
+    if (!job.data) {
+        console.error('Job data is undefined');
+        throw new Error('Job data is undefined');
+    }
+
+    if (typeof job.data !== 'object') {
+        console.error('Job data is not an object:', typeof job.data);
+        throw new Error('Job data is not an object');
+    }
+
+    const { fileName, fileDuration: audioDuration, userId, userPlan } = job.data;
+
+    console.log('Extracted job data:', { fileName, audioDuration, userId, userPlan });
+
+    if (!fileName || typeof fileName !== 'string') {
+        console.error('Invalid fileName:', fileName);
+        throw new Error('Invalid fileName');
+    }
+
+    if (!audioDuration || typeof audioDuration !== 'number') {
+        console.error('Invalid audioDuration:', audioDuration);
+        throw new Error('Invalid audioDuration');
+    }
+
+    if (!userId || typeof userId !== 'string') {
+        console.error('Invalid userId:', userId);
+        throw new Error('Invalid userId');
+    }
+
+    if (!userPlan || typeof userPlan !== 'object') {
+        console.error('Invalid userPlan:', userPlan);
+        throw new Error('Invalid userPlan');
+    }
+
+    logInfo(`Processing transcription for user ${userId}`, path.basename(__filename));
+
+    logInfo(`Processing background task for user ${job?.data?.userId}`, path.basename(__filename));
 
     try {
-        const audioPath = path.resolve(__dirname, job.data.audioPath);
-        console.log(audioPath);
 
 
-        try {
-            await fs.access(audioPath)
-        } catch (error) {
-            console.log("path not accesssile")
+
+
+        if (job && job.data) {// sometime here error occured
+            fileName = job?.data?.fileName;
+            audioDuration = job?.data?.fileDuration;
+            userId = job?.data?.userId;
+            userPlan = job?.data?.userPlan;
+        } else {
+            console.error('Job data is missing');
+            return; // or handle error
         }
+        console.log(fileName, audioDuration, userId, userPlan)
+        // now we will  download the blob
+
+        const buffer = await downloadBlob(userId, fileName)
+        console.log(buffer);
 
 
-        const buffer = await fs.readFile(audioPath);
-        console.log(buffer)
-        //const userSelectedLanguage = job.data.language || 'en-US';
+
+        const combinedTranscription = [];
+        let failedChunks = 0;
+
+
+
+
+
+
+
+        const userSelectedLanguage = 'en-US';
 
 
 
 
         const chunkDuration = 150;
-        const chunks = Math.ceil(job.data.audioDuration / chunkDuration);
+        const chunks = Math.ceil(audioDuration / chunkDuration);
 
-        const totalDurationInSeconds = job.data.audioDuration;
-        const bytesPerChunk = Math.floor(buffer.length / totalDurationInSeconds * chunkDuration);
+
+        const bytesPerChunk = Math.floor(buffer.length / audioDuration * chunkDuration);
 
 
         console.log(`Bytes per chunk: ${bytesPerChunk}`);
@@ -92,11 +148,11 @@ transcriptionQueue.process(async (job) => {
             }
 
             const audioChunk = buffer.slice(startByte, endByte);
-            const chunkWavOutputPath = path.join(__dirname, `chunk-${job.data.userId}-${i}-${Date.now()}.wav`);
+            const chunkWavOutputPath = path.join(__dirname, `chunk-${userId}-${i}-${Date.now()}.wav`);
             console.log(`Chunk ${i} size: ${audioChunk.length} bytes`);
 
             const promise = (async () => {
-                await convertToWav(audioChunk, job.data.userId, chunkWavOutputPath);
+                await convertToWav(audioChunk, userId, chunkWavOutputPath);
                 const chunkTranscription = await fromFile(chunkWavOutputPath);
 
                 if (!chunkTranscription) {
@@ -169,11 +225,14 @@ transcriptionQueue.process(async (job) => {
         }
 
         await sendBlogReadyEmail(job.data.userPlan.user.email, job.data.userPlan.user.name, title);
+        return {}
+
 
     } catch (error) {
         logError(error.message, path.basename(__filename), "inside redis configuration");
         throw error; // Propagate the error
     }
+
 });
 
 
@@ -195,11 +254,12 @@ async function getFailedJobs() {
     console.log(`Total Failed Jobs: ${failedJobs.length}`);
 
     failedJobs.forEach(async (job) => {
+
         console.log(`Failed Job ID: ${job.id}`);
         console.log(`Job Data:`, job.data); // Log job data
-        console.log(`Error Reason:`, job.failedReason);
-        await cleanupAudioFile(job.data.audioPath)
+        console.log(`Error Reason:`, job);
 
+        // await deleteBlob(job.data.userId, job.data.fileName)
         await job.remove()// Log the reason for failure   });
 
     })
@@ -210,7 +270,7 @@ async function getFailedJobs() {
 
 /*setInterval(() => {
     getQueueStats();
-    getFailedJobs()
+    getFailedJobs()*/
 
-}, 5000)*/
+
 export default transcriptionQueue;

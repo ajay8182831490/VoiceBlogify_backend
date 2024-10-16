@@ -1,8 +1,9 @@
 import { BlobServiceClient } from '@azure/storage-blob';
+import fs from 'fs'
 
 const AZURE_STORAGE_CONNECTION_STRING = process.env.azureStorageString;
 const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
-const containerName = 'voiceblogify_audio';
+const containerName = 'audiorecord';
 
 // Function to upload a buffer to Azure Blob Storage
 async function uploadBuffer(userUUID, buffer, fileName) {
@@ -27,6 +28,7 @@ async function downloadBlob(userUUID, fileName) {
     const downloadedBuffer = await streamToBuffer(downloadBlockBlobResponse.readableStreamBody);
 
     console.log(`Downloaded blob: ${fileName}`);
+    await fs.writeFileSync("ajay.mp3", downloadedBuffer);
     return downloadedBuffer; // Return the buffer
 }
 
@@ -49,22 +51,11 @@ async function streamToBuffer(readableStream) {
     });
 }
 
+const userId = 'c22cf815-aad7-43a1-ba62-b9f56f4a2d49'
+const fileName = 'outputc22cf815aad743a1ba62b9f56f4a2d4917290538272505c8d0c01e2ab422ba749adb48e0048e9.mp3'
+//await deleteBlob(userId, fileName)
+
+
 export { deleteBlob, uploadBuffer, downloadBlob }
 
-// Example Usage
-(async () => {
-    const userUUID = 'your-unique-uuid'; // Replace with actual user UUID
-    const buffer = Buffer.from('your-audio-data'); // Replace with your actual buffer data
-    const fileName = 'audio-file.wav'; // The name for the uploaded file
 
-    // Upload the buffer
-    const fileUrl = await uploadBuffer(userUUID, buffer, fileName);
-    console.log(`File URL: ${fileUrl}`);
-
-    // Download the buffer
-    const downloadedBuffer = await downloadBlob(userUUID, fileName);
-    console.log('Downloaded buffer:', downloadedBuffer);
-
-    // Delete the blob
-    await deleteBlob(userUUID, fileName);
-})();
