@@ -8,7 +8,7 @@ config();
 
 // import sdk from "microsoft-cognitiveservices-speech-sdk";
 // const speechConfig = sdk.SpeechConfig.fromSubscription(process.env.azurekey, 'eastus');
-const transcribeAudioAPI = async (filePath, userSelectedLanguage) => {
+/*const transcribeAudioAPI = async (filePath, userSelectedLanguage) => {
     try {
         // Check if the file exists
         await fs.access(filePath);
@@ -58,13 +58,13 @@ const transcribeAudioAPI = async (filePath, userSelectedLanguage) => {
         return null; // Handle the error as needed
     }
 };
-export default transcribeAudioAPI;
+export default transcribeAudioAPI;*/
 
 
 import fs from 'fs/promises';
 import sdk from "microsoft-cognitiveservices-speech-sdk";
 
-const speechConfig = sdk.SpeechConfig.fromSubscription(process.env.azurekey, 'eastus');
+const speechConfig = sdk.SpeechConfig.fromSubscription(process.env.azureKey, 'eastus');
 
 export async function fromFile(audioFilePath) {
     let speechRecognizer;
@@ -118,6 +118,7 @@ export async function fromFile(audioFilePath) {
             console.error('Error during transcription:', error);
             reject(error);
         }
+
     });
 }
 

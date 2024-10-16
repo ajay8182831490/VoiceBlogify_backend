@@ -16,7 +16,7 @@ import bloggerRoutes from './src/blogger/routes/bloggerRoutes.js';
 import userRouter from './src/user/Routes/userRoutes.js';
 import paypalpayment from './src/subscription/payment/controller/PaymentController.js';
 import helmet from 'helmet';
-import csurf from 'csurf'; 
+import csurf from 'csurf';
 
 dotenv.config();
 
@@ -28,7 +28,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(helmet()); // Apply Helmet for security headers
 
-app.set('trust proxy', 1); 
+app.set('trust proxy', 1);
 // Content Security Policy (CSP) Configuration
 const cspConfig = {
   directives: {
@@ -117,12 +117,13 @@ app.use(passport.session());
 
 
 
-const csrfProtection = csurf({ cookie: true });
-app.use(csrfProtection);
+// const csrfProtection = csurf({ cookie: true });
+// app.use(csrfProtection);
 
-//Route for handling CSRF tokens in client-side requests
-app.get('/csrf-token', (req, res) => {
-  res.json({ csrfToken: req.csrfToken() });
+// //Route for handling CSRF tokens in client-side requests
+// app.get('/csrf-token', (req, res) => {
+//   res.json({ csrfToken: req.csrfToken() });
+// })
 
 
 
