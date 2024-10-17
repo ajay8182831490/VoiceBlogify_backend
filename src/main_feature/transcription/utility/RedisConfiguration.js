@@ -265,7 +265,7 @@ async function getFailedJobs() {
 
 setInterval(() => {
     getQueueStats();
-    getFailedJobs(),
+    getFailedJobs()
 
 }, [1000000]);
 
