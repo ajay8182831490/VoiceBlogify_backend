@@ -64,7 +64,7 @@ const flushCache = async () => {
 };
 
 
-//await flushCache()
+
 
 
 
@@ -265,8 +265,9 @@ async function getFailedJobs() {
 
 setInterval(() => {
     getQueueStats();
-    getFailedJobs()
-}, [10000]);
+    getFailedJobs(),
+    await flushCache()
+}, [1000000]);
 
 
 
