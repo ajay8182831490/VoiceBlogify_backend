@@ -28,7 +28,7 @@ async function downloadBlob(userUUID, fileName) {
     const downloadedBuffer = await streamToBuffer(downloadBlockBlobResponse.readableStreamBody);
 
     console.log(`Downloaded blob: ${fileName}`);
-    await fs.writeFileSync("ajay.mp3", downloadedBuffer);
+
     return downloadedBuffer; // Return the buffer
 }
 

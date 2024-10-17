@@ -16,7 +16,7 @@ const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 export const generateBlogFromText = async (transcribedText) => {
     try {
 
-        console.log("mai blog geneartion mae aaya hu")
+
         const prompt = `
         Task: Generate a high-quality, professional blog post based on the provided transcribed audio content. The blog should reflect the speaker’s tone, style, and intent while being authentic, engaging, and informative. The output should be well-structured, reader-friendly, and include dynamic elements like bullet points, numbered lists, and relevant tags wherever applicable.
 

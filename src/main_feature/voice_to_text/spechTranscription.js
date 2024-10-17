@@ -81,14 +81,14 @@ export async function fromFile(audioFilePath) {
             // Event handler for recognized speech
             speechRecognizer.recognized = (s, e) => {
                 if (e.result.reason === sdk.ResultReason.RecognizedSpeech) {
-                    console.log(e.result.text);
+                    // console.log(e.result.text);
                     fullTranscription += e.result.text + ' '; // Append recognized text
                 }
             };
 
             // Event handler for canceled recognition
             speechRecognizer.canceled = (s, e) => {
-                console.error('Recognition canceled:', e.result.reason);
+                //  console.error('Recognition canceled:', e.result.reason);
                 speechRecognizer.close();
                 reject(new Error('Recognition canceled: ' + e.result.reason));
             };
@@ -112,6 +112,7 @@ export async function fromFile(audioFilePath) {
                     reject(error);
                 }
             );
+
 
 
         } catch (error) {

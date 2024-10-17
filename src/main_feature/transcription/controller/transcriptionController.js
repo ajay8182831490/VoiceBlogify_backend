@@ -8,6 +8,7 @@ import { PrismaClient } from "@prisma/client";
 
 import ffmpeg from 'fluent-ffmpeg';
 import * as fs from 'fs/promises';
+import { PassThrough } from 'stream';
 
 import { generateBlogFromText } from '../../voice_to_text/blogGeneration.js';
 import sendBlogReadyEmail, { sendFailureEmail } from '../utility/email.js';
@@ -15,169 +16,20 @@ import transcriptionQueue from '../utility/RedisConfiguration.js';
 import { v4 as uuidv4 } from 'uuid';
 
 import { uploadBuffer, deleteBlob } from '../utility/Storage.js';
+import internal from 'stream';
 
 
 const prisma = new PrismaClient();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-
-const getAudioDuration = async (audioBuffer, mediaType) => {
-
-    const tempFilePath = path.join(__dirname, `temp-media-${Date.now()}.${mediaType === 'video' ? 'mp4' : 'mp3'}`);
-
-
-    try {
-
-        await fs.writeFile(tempFilePath, audioBuffer);
-
-        const metadata = await ffprobe(tempFilePath, { path: ffprobeStatic.path });
-
-
-        return metadata.streams[0].duration;
-
-    } catch (error) {
-
-        return null;
-
-    } finally {
-
-        await fs.unlink(tempFilePath);
-    }
-};
+import { extractAudioFromVideo, checkUserPlan, getAudioDuration } from '../utility/TranscriptionUtility.js';
 
 
 
-
-
-
-const checkUserPlan = async (userId) => {
-    const userPlan = await prisma.subscription.findFirst({
-        where: {
-            userId: userId,
-            remainingPosts: {
-                gt: 0
-            },
-            status: 'ACTIVE'
-        },
-        select: {
-            plan: true,
-            user: {
-                select: {
-                    email: true,
-                    name: true
-                }
-            }
-        }
-
-    });
-
-    if (!userPlan) return null;
-
-    return userPlan;
-};
-export const convertToWav = async (buffer, userId, outputPath) => {
-    let tempFilePath = null;
-    try {
-        tempFilePath = path.join(__dirname, `temp-audio-${userId}-${Date.now()}.mp3`);
-
-
-
-
-        await fs.writeFile(tempFilePath, buffer);
-
-
-        return new Promise((resolve, reject) => {
-            ffmpeg(tempFilePath)
-                .toFormat('wav')
-                .on('end', async () => {
-                    await fs.unlink(tempFilePath);
-                    console.log("wav converted")
-                    resolve({ outputPath, tempFilePath });
-                })
-                .on('error', async (err) => {
-
-                    if (tempFilePath) {
-                        await fs.unlink(tempFilePath).catch(unlinkError => {
-                            console.error("Failed to delete temporary file during error:", unlinkError);
-                        });
-                    }
-                    reject(new Error('WAV conversion failed.'));
-                })
-                .save(outputPath);
-
-        });
-    } catch (error) {
-
-        await fs.unlink(tempFilePath);
-        throw new Error('WAV conversion failed.');
-    }
-};
-
-const deleteFileWithRetry = (filePath, retries = 3, delay = 1000) => {
-    return new Promise((resolve, reject) => {
-        const attemptDelete = (attempt) => {
-            fs.unlink(filePath, (err) => {
-                if (err) {
-                    if (attempt < retries) {
-                        console.error(`Failed to delete file: ${filePath}, Attempt ${attempt + 1} of ${retries}, Error: ${err.message}. Retrying in ${delay} ms...`);
-                        setTimeout(() => attemptDelete(attempt + 1), delay); // Retry after delay
-                    } else {
-                        console.error(`Failed to delete file after ${retries} attempts: ${filePath}`);
-                        reject(err); // Give up after the maximum number of retries
-                    }
-                } else {
-                    console.log(`Deleted temporary file: ${filePath}`);
-                    resolve(); // Successfully deleted
-                }
-            });
-        };
-        attemptDelete(0); // Start the first attempt
-    });
-};
-
-const extractAudioFromVideo = async (videoBuffer, userId) => {
-    const videoPath = path.join(__dirname, `${userId}tempVideo.mp4`);
-    const audioPath = path.join(__dirname, `${userId}tempAudio.mp3`);
-
-    try {
-
-        await fs.writeFile(videoPath, videoBuffer);
-
-
-        await new Promise((resolve, reject) => {
-            ffmpeg(videoPath)
-                .output(audioPath)
-                .on('end', () => {
-                    console.log("audio extract")
-                    resolve();
-                })
-                .on('error', (err) => {
-                    //console.error('Error during audio extraction:', err);
-                    reject(err);
-                })
-                .run();
-        });
-
-
-        const audioBuffer = await fs.readFile(audioPath);
-
-
-        await fs.unlink(videoPath);
-        await fs.unlink(audioPath);
-
-        return audioBuffer;
-    } catch (error) {
-
-        throw error;
-    }
-};
 function sanitizeFileName(fileName) {
     return fileName.replace(/[^a-zA-Z0-9_\.]/g, '');
 }
-
 const addJobToQueue = async (userId, fileName, fileDuration, userPlan) => {
-
     if (!userId || !fileName || !fileDuration || !userPlan) {
         console.error('Invalid input data:', { userId, fileName, fileDuration, userPlan });
         return;
@@ -186,52 +38,196 @@ const addJobToQueue = async (userId, fileName, fileDuration, userPlan) => {
     try {
         const job = await transcriptionQueue.add(
             { userId, fileName, fileDuration, userPlan },
-            { attempts: 1, delay: 5000 } // Retry with backoff
+            { attempts: 1, delay: 5000, removeOnComplete: true } // Retry with backoff
         );
-        console.log('Job added to queue successfully:', job.id, job.data);
+        console.log('Job added to queue successfully:', job.id);
     } catch (error) {
         console.error('Error adding job to queue:', error.message);
+        throw new Error('Failed to add job to queue');
     }
 };
+export const convertToWav = async (buffer, userId) => {
+    const tempFilePath = path.join(__dirname, `temp-audio-${userId}-${Date.now()}.mp3`);
+    const outputFilePath = path.join(__dirname, `output-audio-${userId}-${Date.now()}.wav`); // Define output file path
+
+    try {
+        // Write the input audio buffer to a temporary file
+        await fs.writeFile(tempFilePath, buffer);
+
+        return new Promise((resolve, reject) => {
+            ffmpeg(tempFilePath)
+                .toFormat('wav') // Set the desired output format
+                .on('end', async () => {
+                    console.log("WAV conversion completed");
+
+                    // Read the output file and resolve the buffer
+                    const outputBuffer = await fs.readFile(outputFilePath);
 
 
+                    await fs.unlink(tempFilePath);
+                    await fs.unlink(outputFilePath);
+
+                    resolve(outputBuffer); // Resolve with the WAV buffer
+                })
+                .on('error', async (err) => {
+                    console.error("Error during conversion:", err);
+
+                    // Clean up temporary files in case of error
+                    await fs.unlink(tempFilePath).catch(unlinkError => {
+                        console.error("Failed to delete temporary file during error:", unlinkError);
+                    });
+                    await fs.unlink(outputFilePath).catch(unlinkError => {
+                        console.error("Failed to delete output file during error:", unlinkError);
+                    });
+
+                    reject(new Error('WAV conversion failed: ' + err.message));
+                })
+                .save(outputFilePath); // Save to the defined output file
+        });
+    } catch (error) {
+
+
+        // Clean up temporary files if an error occurs
+        await fs.unlink(tempFilePath).catch(unlinkError => {
+            console.error("Failed to delete temporary file during error:", unlinkError);
+        });
+        throw new Error('WAV conversion failed: ' + error.message);
+    }
+};
 export const recordTranscription = async (req, res) => {
     const { userId } = req;
     logInfo(`Starting audio transcription process for user ${userId}`, path.basename(__filename), recordTranscription);
 
-    // Generate a sanitized filename'
-    let tempFileName = `output-${userId}-${Date.now()}.mp3`;
+    let fileName, fileDuration;
+    let tempFileName = `output-${userId}-${Date.now()}.wav`;
+
+
+    // Validate file presence
+    const file = req.file;
+    if (!file) {
+        return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    const fileType = file.mimetype;
+    if (!fileType.startsWith('audio/') && !fileType.startsWith('video/')) {
+        return res.status(400).json({ message: "Unsupported file type" });
+    }
+
+
     tempFileName = sanitizeFileName(tempFileName);
-    const fileName = encodeURIComponent(tempFileName);
-    let fileDuration = 150;
-    const userPlan = await checkUserPlan(userId);
+    fileName = encodeURIComponent(tempFileName);
+
+
+
+
+
+
+    let Buffer;
+
+    if (fileType.startsWith('audio/')) {
+
+        Buffer = file.buffer;
+
+    } else if (fileType.startsWith('video/')) {
+
+        const videoBuffer = file.buffer;
+
+
+
+        Buffer = await extractAudioFromVideo(videoBuffer, userId);
+
+
+        if (!Buffer) return res.status(500).json({ message: "Audio extraction from video failed" });
+
+
+
+    } else {
+        return res.status(400).json({ message: "Unsupported file type" });
+    }
+
+
 
 
     try {
-        console.log("before ", userId, fileName, fileDuration, userPlan)
-        await addJobToQueue(userId, fileName, fileDuration, userPlan);
 
-        console.log("after ", userId, fileName, fileDuration, userPlan)
+
+        const waveBuffer = await convertToWav(Buffer, userId);
+
+        fileDuration = await getAudioDuration(waveBuffer)
+
+        const userPlan = await checkUserPlan(userId);
+        if (!userPlan) {
+            return res.status(403).json({ message: "No active subscription plan" });
+        }
+
+        // Define maximum allowed duration based on the plan
+        const maxAllowedDuration = getMaxAllowedDuration(userPlan.plan);
+        if (fileDuration > maxAllowedDuration) {
+            return res.status(400).json({
+                message: `Your plan allows a maximum of ${maxAllowedDuration / 60} minutes of audio/video.`,
+            });
+        }
+
+        if (fileDuration < 60) {
+            return res.status(400).json({ message: "Audio duration should be at least1 minutes" })
+        }
+        try {
+            await uploadBuffer(userId, waveBuffer, fileName);
+        } catch (uploadError) {
+            logError(uploadError, path.basename(__filename), 'Error uploading buffer');
+            return res.status(500).json({ message: "Failed to upload audio buffer" });
+        }
+
+        try {
+            await addJobToQueue(userId, fileName, fileDuration, userPlan);
+        } catch (queueError) {
+            logError(queueError, path.basename(__filename), 'Error adding job to queue');
+            return res.status(500).json({ message: "Failed to add transcription job to queue" });
+        }
+
 
         res.status(200).json({
             message: "Processing started, you'll be notified via email once it's done.",
-        });
-    }
-    catch (error) {
+        })
+
+    } catch (error) {
         logError(error, path.basename(__filename), 'Error in transcription process');
         return res.status(500).json({ message: "Internal server error" });
+    }
+
+};
+
+
+
+
+
+
+
+const getMaxAllowedDuration = (plan) => {
+    switch (plan) {
+        case "FREE":
+            return 10 * 60; // 10 minutes
+        case "BASIC":
+            return 20 * 60; // 20 minutes
+        case "PREMIUM":
+            return 60 * 60; // 60 minutes
+        case "BUSINESS":
+            return 90 * 60; // 90 minutes
+        default:
+            throw new Error("Invalid user plan");
     }
 };
 
 
 
 
-// Event listeners for queue job completion and failure 
+
+
 transcriptionQueue.on('completed', async (job) => {
     try {
 
         console.log("job completed")
-        // await deleteBlob(job.data.userId, job.data.fileName)
+        await deleteBlob(job.data.userId, job.data.fileName)
 
 
     } catch (error) {
