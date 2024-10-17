@@ -70,57 +70,78 @@ export async function fromFile(audioFilePath) {
     let speechRecognizer;
     let fullTranscription = '';
 
-    console.log(audioFilePath);
+    try {
+        const audioData = await fs.readFile(audioFilePath);
+        const audioConfig = sdk.AudioConfig.fromWavFileInput(audioData);
+        speechRecognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
 
-    return new Promise(async (resolve, reject) => {
-        try {
-            const audioData = await fs.readFile(audioFilePath);
-            const audioConfig = sdk.AudioConfig.fromWavFileInput(audioData);
-            speechRecognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
-
+        return new Promise((resolve, reject) => {
             // Event handler for recognized speech
             speechRecognizer.recognized = (s, e) => {
                 if (e.result.reason === sdk.ResultReason.RecognizedSpeech) {
-                    // console.log(e.result.text);
-                    fullTranscription += e.result.text + ' '; // Append recognized text
+                    fullTranscription += e.result.text + ' ';
                 }
             };
 
             // Event handler for canceled recognition
             speechRecognizer.canceled = (s, e) => {
-                //  console.error('Recognition canceled:', e.result.reason);
-                speechRecognizer.close();
-                reject(new Error('Recognition canceled: ' + e.result.reason));
+                console.error('Recognition canceled:', e.errorDetails);
+                stopAndCleanup();
+                reject(new Error(`Recognition canceled: ${e.errorDetails}`));
             };
 
             // Event handler for when the session stops
             speechRecognizer.sessionStopped = (s, e) => {
                 console.log('Session stopped. Full Transcription:', fullTranscription.trim());
-                // Close the recognizer and resolve the promise
-                speechRecognizer.close();
-                resolve(fullTranscription.trim()); // Resolve with full transcription
+                stopAndCleanup();
+                resolve(fullTranscription.trim());
             };
 
-            // Start the recognition process asynchronously
+            // Helper function to stop recognition and cleanup
+            const stopAndCleanup = () => {
+                if (speechRecognizer) {
+                    speechRecognizer.stopContinuousRecognitionAsync(
+                        () => {
+                            speechRecognizer.close();
+                            speechRecognizer = null;
+                        },
+                        (err) => {
+                            console.error('Error stopping recognition:', err);
+                            speechRecognizer.close();
+                            speechRecognizer = null;
+                        }
+                    );
+                }
+            };
+
+            // Set a timeout to force stop if recognition takes too long
+            const timeout = setTimeout(() => {
+                console.log('Recognition timeout - forcing stop');
+                stopAndCleanup();
+                resolve(fullTranscription.trim());
+            }, 3000000); // 30 second timeout
+
+            // Start the recognition process
             speechRecognizer.startContinuousRecognitionAsync(
                 () => {
-                    console.log("Recognition started successfully.");
+                    console.log("Recognition started successfully for:", audioFilePath);
                 },
                 (error) => {
                     console.error("Error starting recognition:", error);
-                    speechRecognizer.close();
+                    clearTimeout(timeout);
+                    stopAndCleanup();
                     reject(error);
                 }
             );
+        });
 
-
-
-        } catch (error) {
-            console.error('Error during transcription:', error);
-            reject(error);
+    } catch (error) {
+        console.error('Error during transcription setup:', error);
+        if (speechRecognizer) {
+            speechRecognizer.close();
         }
-
-    });
+        throw error;
+    }
 }
 
 

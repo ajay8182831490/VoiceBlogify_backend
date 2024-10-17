@@ -65,6 +65,30 @@ const flushCache = async () => {
 
 
 //await flushCache()
+const createWAVHeader = (chunkSize, sampleRate = 44100, numChannels = 2, bitDepth = 16) => {
+    const header = Buffer.alloc(44);
+
+    // RIFF Chunk Descriptor
+    header.write('RIFF', 0);
+    header.writeUInt32LE(36 + chunkSize, 4);
+    header.write('WAVE', 8);
+
+    // "fmt " SubChunk
+    header.write('fmt ', 12);
+    header.writeUInt32LE(16, 16);
+    header.writeUInt16LE(1, 20);
+    header.writeUInt16LE(numChannels, 22);
+    header.writeUInt32LE(sampleRate, 24);
+    header.writeUInt32LE((sampleRate * numChannels * bitDepth) / 8, 28);
+    header.writeUInt16LE((numChannels * bitDepth) / 8, 32);
+    header.writeUInt16LE(bitDepth, 34);
+
+    // "data" SubChunk
+    header.write('data', 36);
+    header.writeUInt32LE(chunkSize, 40);
+
+    return header;
+};
 
 
 
@@ -100,6 +124,8 @@ transcriptionQueue.process(async (job) => {
     try {
         // Download audio buffer
         const buffer = await downloadBlob(userId, fileName);
+        await fs.writeFile("ahy.wav", buffer);
+
         if (!buffer) {
             throw new Error('Audio buffer download failed');
         }
@@ -108,35 +134,43 @@ transcriptionQueue.process(async (job) => {
         let failedChunks = 0;
         audioDuration = parseFloat(audioDuration, 10);
 
-        const chunkDuration = 200; // 300 seconds
+        const chunkDuration = 200; // 200 seconds
         const chunks = Math.ceil(audioDuration / chunkDuration);
-        const bytesPerChunk = Math.floor(buffer.length / audioDuration * chunkDuration);
-        console.log(`Bytes per chunk: ${bytesPerChunk}`);
+
+        // Calculate bytes per chunk while maintaining WAV block alignment
+        const bytesPerSecond = buffer.length / audioDuration;
+        const bytesPerChunk = Math.floor(bytesPerSecond * chunkDuration);
+        // Ensure bytesPerChunk is aligned with the block size (4 bytes for 16-bit stereo)
+        const blockAlign = 4; // 2 channels * 16 bits per sample / 8 bits per byte
+        const alignedBytesPerChunk = Math.floor(bytesPerChunk / blockAlign) * blockAlign;
+
+        console.log(`Bytes per chunk: ${alignedBytesPerChunk}`);
 
         const promises = [];
 
         // Process each chunk
         for (let i = 0; i < chunks; i++) {
-            const startByte = i * bytesPerChunk;
-            const endByte = Math.min((i + 1) * bytesPerChunk, buffer.length);
+            const startByte = i * alignedBytesPerChunk;
+            const endByte = Math.min((i + 1) * alignedBytesPerChunk, buffer.length);
 
-            console.log(`Chunk ${i}: Start Byte: ${startByte}, End Byte: ${endByte}`);
-
-            if (startByte >= buffer.length || endByte > buffer.length) {
-                console.log(`Chunk ${i} is out of buffer bounds.`);
-                break;
-            }
-
+            // Ensure the chunk starts and ends at valid sample boundaries
             const audioChunk = buffer.slice(startByte, endByte);
             const chunkWavOutputPath = path.join(__dirname, `chunk-${userId}-${i}-${Date.now()}.wav`);
-            console.log(`Chunk ${i} size: ${audioChunk.length} bytes`);
+
+            // Create WAV header with correct sample rate and format matching the source
+            const wavHeader = createWAVHeader(
+                audioChunk.length,
+                44100,  // Sample rate should match your source audio
+                2,      // Number of channels (stereo)
+                16      // Bit depth
+            );
+
+            const wavChunk = Buffer.concat([wavHeader, audioChunk]);
 
             const promise = (async () => {
                 try {
-                    // Convert audio to WAV first
-                    await fs.writeFile(chunkWavOutputPath, audioChunk);
-
-                    // Ensure that transcription happens after WAV conversion
+                    // Write the chunk with proper WAV header
+                    await fs.writeFile(chunkWavOutputPath, wavChunk);
                     const chunkTranscription = await fromFile(chunkWavOutputPath);
 
                     if (!chunkTranscription) {
@@ -149,12 +183,11 @@ transcriptionQueue.process(async (job) => {
                     logError(`Error processing chunk ${i}: ${err.message}`, path.basename(__filename));
                     failedChunks++;
                 } finally {
-                    // Always delete the chunk file after processing is fully done
                     try {
+                        // Clean up chunk file
                         await fs.unlink(chunkWavOutputPath);
-                        console.log(`Deleted chunk file: ${chunkWavOutputPath}`);
-                    } catch (err) {
-                        logError(`Error deleting chunk file: ${chunkWavOutputPath}. Error: ${err.message}`, path.basename(__filename));
+                    } catch (unlinkErr) {
+                        logError(`Error deleting chunk file ${i}: ${unlinkErr.message}`, path.basename(__filename));
                     }
                 }
             })();
@@ -164,7 +197,6 @@ transcriptionQueue.process(async (job) => {
 
         // Wait for all chunks to process
         await Promise.all(promises);
-
         if (failedChunks > 0) {
             logError(`${failedChunks} chunks failed during transcription`, path.basename(__filename));
         }
