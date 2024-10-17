@@ -261,12 +261,12 @@ async function getFailedJobs() {
 
 }
 
-
+    await flushCache()
 
 setInterval(() => {
     getQueueStats();
     getFailedJobs(),
-    await flushCache()
+
 }, [1000000]);
 
 
