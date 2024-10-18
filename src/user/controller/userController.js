@@ -122,7 +122,7 @@ export const disconnect_linkedin = async (req, res) => {
             }
 
         });
-        console.log(res1)
+
 
         res.status(200).json({ message: "Successfully disconnected from LinkedIn." });
     } catch (error) {
