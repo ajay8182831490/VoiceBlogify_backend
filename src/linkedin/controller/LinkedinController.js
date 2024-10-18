@@ -86,7 +86,7 @@ export const share_linkedin = async (req, res) => {
         const video = req.files?.video;
 
 
-        if (description > length > 3000) {
+        if (description.length > 3000) {
             res
                 .status(400)
                 .json({
