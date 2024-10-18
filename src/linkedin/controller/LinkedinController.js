@@ -128,6 +128,8 @@ export const share_linkedin = async (req, res) => {
             videoUrl
         );
 
+        console.log(postResponse);
+
         /*const existingToken = await prisma.token.findFirst({
             where: {
 
