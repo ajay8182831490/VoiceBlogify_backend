@@ -332,7 +332,12 @@ const createLinkedInPost = async (
             body: JSON.stringify(postData),
         });
 
-        console.log(response);
+      
+
+        if (!response.ok) {
+    const errorData = await response.json(); // Read the response body as JSON
+    console.error('Error details:', errorData); // Log the detailed error message
+}
 
         if (response.ok) {
             return await response.json();
