@@ -130,7 +130,7 @@ export const share_linkedin = async (req, res) => {
 
         console.log(postResponse);
 
-        /*const existingToken = await prisma.token.findFirst({
+        const existingToken = await prisma.token.findFirst({
             where: {
 
                 userId: req.userId,
@@ -159,8 +159,11 @@ export const share_linkedin = async (req, res) => {
             data: {
                 postUrns: updatedPostUrns,
             },
-        });*/
-        return res.status(postResponse.status).json(postResponse);
+        });
+
+        res
+            .status(200)
+            .json({ message: "Post created successfully", postResponse });
     } catch (ex) {
         logError(ex, path.basename(__filename));
         res.status(500).json({ message: "internal server error" });
@@ -277,9 +280,8 @@ const uploadVideoToLinkedIn = async (accessToken, personId, video) => {
         throw new Error("Video upload failed");
     }
 };
+
 const createLinkedInPost = async (
-    req,
-    res,
     accessToken,
     personId,
     description,
@@ -287,17 +289,6 @@ const createLinkedInPost = async (
     videoUrl = null
 ) => {
     try {
-        // LinkedIn character limit constraints
-        const maxDescriptionLength = 3000; // Max length for post description
-
-        // Check if description exceeds max character limit
-      /*  if (description.length > maxDescriptionLength) {
-            return res.status(400).json({
-                success: false,
-                message: `Post description exceeds the maximum allowed length of ${maxDescriptionLength} characters.`,
-            });
-        }*/
-
         const postData = {
             author: `urn:li:person:${personId}`,
             lifecycleState: "PUBLISHED",
@@ -342,29 +333,27 @@ const createLinkedInPost = async (
         });
 
         if (response.ok) {
-            return { status: 201, success: true, message: "Post created successfully on LinkedIn." };
+            return await response.json();
         } else {
-            const errorMessages = {
-                400: `Bad Request: ${data.message}`,
-                401: `Unauthorized: Invalid or expired access token.`,
-                403: `Forbidden: Access is denied.`,
-                404: `Not Found: The resource does not exist.`,
-                409: `Conflict: Duplicate content detected.`,
-                413: `Payload Too Large: The post content is too long.`,
-                422: `Unprocessable Entity: ${data.message}`,
-                429: `Too Many Requests: You've hit LinkedIn's rate limit.`,
-                500: `Internal Server Error: Something went wrong on LinkedIn's side.`,
-            };
-
-            return { status: response.status, success: false, message: errorMessages[response.status] || `Unexpected error: ${response.statusText}` };
+            const errorData = await response.json();
+            logError(
+                `Error posting to LinkedIn: ${response.status} ${response.statusText}`,
+                path.basename(__filename)
+            );
+            logError(
+                `Error Details: ${JSON.stringify(errorData)}`,
+                path.basename(__filename)
+            );
+            throw new Error("Failed to post on LinkedIn");
         }
     } catch (error) {
-        logError(`Error in creating LinkedIn post: ${error.message}`, path.basename(__filename), createLinkedInPost);
-        return { status: 500, success: false, message: `LinkedIn post creation failed: ${error.message}` };
+        logError(
+            `Error in creating LinkedIn post: ${error.message}`,
+            path.basename(__filename)
+        );
+        throw new Error("LinkedIn post creation failed");
     }
 };
-
-
 
 const uploadVideo = async (uploadUrl, videoBuffer) => {
     try {
