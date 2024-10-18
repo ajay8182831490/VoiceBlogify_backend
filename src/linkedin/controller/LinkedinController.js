@@ -278,8 +278,9 @@ const uploadVideoToLinkedIn = async (accessToken, personId, video) => {
         throw new Error("Video upload failed");
     }
 };
-
 const createLinkedInPost = async (
+    req,
+    res,
     accessToken,
     personId,
     description,
@@ -287,6 +288,17 @@ const createLinkedInPost = async (
     videoUrl = null
 ) => {
     try {
+        // LinkedIn character limit constraints
+        const maxDescriptionLength = 3000; // Max length for post description
+
+        // Check if description exceeds max character limit
+        if (description.length > maxDescriptionLength) {
+            return res.status(400).json({
+                success: false,
+                message: `Post description exceeds the maximum allowed length of ${maxDescriptionLength} characters.`,
+            });
+        }
+
         const postData = {
             author: `urn:li:person:${personId}`,
             lifecycleState: "PUBLISHED",
@@ -330,28 +342,78 @@ const createLinkedInPost = async (
             body: JSON.stringify(postData),
         });
 
+
+
         if (response.ok) {
-            return await response.json();
+            return res.status(201).json({
+                success: true,
+                message: "Post created successfully on LinkedIn.",
+
+            });
         } else {
-            const errorData = await response.json();
-            logError(
-                `Error posting to LinkedIn: ${response.status} ${response.statusText}`,
-                path.basename(__filename)
-            );
-            logError(
-                `Error Details: ${JSON.stringify(errorData)}`,
-                path.basename(__filename)
-            );
-            throw new Error("Failed to post on LinkedIn");
+            // Handle specific LinkedIn API errors based on status codes
+            if (response.status === 400) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Bad Request: ${data.message}`,
+                });
+            } else if (response.status === 401) {
+                return res.status(401).json({
+                    success: false,
+                    message: `Unauthorized: Invalid or expired access token.`,
+                });
+            } else if (response.status === 403) {
+                return res.status(403).json({
+                    success: false,
+                    message: `Forbidden: Access is denied.`,
+                });
+            } else if (response.status === 404) {
+                return res.status(404).json({
+                    success: false,
+                    message: `Not Found: The resource does not exist.`,
+                });
+            } else if (response.status === 409) {
+                return res.status(409).json({
+                    success: false,
+                    message: `Conflict: Duplicate content detected.`,
+                });
+            } else if (response.status === 413) {
+                return res.status(413).json({
+                    success: false,
+                    message: `Payload Too Large: The post content is too long.`,
+                });
+            } else if (response.status === 422) {
+                return res.status(422).json({
+                    success: false,
+                    message: `Unprocessable Entity: ${data.message}`,
+                });
+            } else if (response.status === 429) {
+                return res.status(429).json({
+                    success: false,
+                    message: `Too Many Requests: You've hit LinkedIn's rate limit.`,
+                });
+            } else if (response.status === 500) {
+                return res.status(500).json({
+                    success: false,
+                    message: `Internal Server Error: Something went wrong on LinkedIn's side.`,
+                });
+            } else {
+                return res.status(response.status).json({
+                    success: false,
+                    message: `Unexpected error: ${response.statusText}`,
+                });
+            }
         }
     } catch (error) {
-        logError(
-            `Error in creating LinkedIn post: ${error.message}`,
-            path.basename(__filename)
-        );
-        throw new Error("LinkedIn post creation failed");
+        // Log the error and return a 500 status code for internal errors
+        logError(`Error in creating LinkedIn post: ${error.message}`, path.basename(__filename), createLinkedInPost);
+        return res.status(500).json({
+            success: false,
+            message: `LinkedIn post creation failed: ${error.message}`,
+        });
     }
 };
+
 
 const uploadVideo = async (uploadUrl, videoBuffer) => {
     try {
