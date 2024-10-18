@@ -38,7 +38,7 @@ const addJobToQueue = async (userId, fileName, fileDuration, userPlan) => {
     try {
         const job = await transcriptionQueue.add(
             { userId, fileName, fileDuration, userPlan },
-            { attempts: 1, delay: 5000, removeOnComplete: true } // Retry with backoff
+            { attempts: 1, delay: 1000, removeOnComplete: true } // Retry with backoff
         );
         console.log('Job added to queue successfully:', job.id);
     } catch (error) {
@@ -104,6 +104,8 @@ export const recordTranscription = async (req, res) => {
 
     // Validate file presence
     const file = req.file;
+
+
     if (!file) {
         return res.status(400).json({ message: "No file uploaded" });
     }
@@ -171,11 +173,15 @@ export const recordTranscription = async (req, res) => {
         if (fileDuration < 60) {
             return res.status(400).json({ message: "Audio duration should be at least1 minutes" })
         }
+
+
+
+        const MAX_RETRIES = 1;
+
         try {
-            await uploadBuffer(userId, waveBuffer, fileName);
-        } catch (uploadError) {
-            logError(uploadError, path.basename(__filename), 'Error uploading buffer');
-            return res.status(500).json({ message: "Failed to upload audio buffer" });
+            await uploadWithRetry(userId, waveBuffer, fileName, MAX_RETRIES);
+        } catch (error) {
+            return res.status(500).json({ message: error.message });
         }
 
         try {
@@ -184,11 +190,11 @@ export const recordTranscription = async (req, res) => {
             logError(queueError, path.basename(__filename), 'Error adding job to queue');
             return res.status(500).json({ message: "Failed to add transcription job to queue" });
         }
-
-
         res.status(200).json({
             message: "Processing started, you'll be notified via email once it's done.",
         })
+
+
 
     } catch (error) {
         logError(error, path.basename(__filename), 'Error in transcription process');
@@ -197,7 +203,19 @@ export const recordTranscription = async (req, res) => {
 
 };
 
-
+const uploadWithRetry = async (userId, waveBuffer, fileName, MAX_RETRIES) => {
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+            await uploadBuffer(userId, waveBuffer, fileName);
+            return; // Exit the function if the upload is successful
+        } catch (uploadError) {
+            logError(uploadError, path.basename(__filename), 'Error uploading buffer');
+            if (attempt === MAX_RETRIES) {
+                throw new Error("Failed to upload audio buffer after retrying");
+            }
+        }
+    }
+};
 
 
 

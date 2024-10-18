@@ -1,11 +1,20 @@
 import express from "express";
-
+import rateLimit from "express-rate-limit";
 const router = express.Router();
 
 
 import { ensureAuthenticated } from "../../../middleware/authMiddleware.js";
 import { recordTranscription } from "../controller/transcriptionController.js";
+import attachUserId from "../../../middleware/atttachedUser.js";
 import multer from 'multer';
+const RateLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 1,
+    handler: (req, res) => {
+        res.status(429).json({ message: "Too many request please try again ." });
+    }
+
+});
 
 
 const storage = multer.memoryStorage();
@@ -29,7 +38,7 @@ const upload = multer({
 
 
 
-router.post('/transcription/audioRecord', ensureAuthenticated, upload.single('audio'), recordTranscription);
-router.post('/transcription/audiofile', ensureAuthenticated, upload.single('file'), recordTranscription);
+router.post('/transcription/audioRecord', RateLimiter, ensureAuthenticated, attachUserId, upload.single('audio'), recordTranscription);
+router.post('/transcription/audiofile', RateLimiter, ensureAuthenticated, attachUserId, upload.single('file'), recordTranscription);
 
 export default router;

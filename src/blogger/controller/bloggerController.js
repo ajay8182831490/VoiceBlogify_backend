@@ -52,6 +52,8 @@ const getBlogId = async (req, res) => {
         return res.status(200).json(extractedData);
     } catch (error) {
         // Handle 401 Unauthorized error for access token
+
+
         if (error.response && error.response.status === 401) {
             try {
                 // Fetch the user's refresh token from the database
@@ -98,6 +100,11 @@ const getBlogId = async (req, res) => {
                 logError('Failed to refresh access token: ' + refreshError.message, path.basename(__filename), getBlogId);
                 return res.status(500).send('Failed to refresh access token');
             }
+        }
+        else if (error.response && error.response.status === 403) {
+
+
+            return res.status(403).json({ message: "You have not allowed to manage the blogger for your account." });
         }
 
         logError('Error fetching blogs: ' + error.message, path.basename(__filename), getBlogId);
