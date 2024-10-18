@@ -2,7 +2,7 @@ import { logInfo, logError } from "../../../utils/logger.js";
 import path from "path";
 import express, { response } from "express";
 const router = express.Router();
-const base = "https://api-m.sandbox.paypal.com";
+const base = "https://api-m.paypal.com";
 import { PrismaClient, Plan } from "@prisma/client";
 import { _decodeChunks } from "openai/streaming.mjs";
 const prisma = new PrismaClient();

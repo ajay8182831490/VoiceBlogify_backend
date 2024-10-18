@@ -93,168 +93,283 @@ const createWAVHeader = (chunkSize, sampleRate = 44100, numChannels = 2, bitDept
 
 
 transcriptionQueue.process(async (job) => {
-    console.log('Received job:', JSON.stringify(job, null, 2));
-
-    // Job data validation
-    let { fileName, fileDuration: audioDuration, userId, userPlan } = job.data;
-    audioDuration = parseInt(audioDuration, 10);
-
-    if (!fileName || typeof fileName !== 'string') {
-        console.error('Invalid fileName:', fileName);
-        throw new Error('Invalid fileName');
-    }
-
-    if (!audioDuration || typeof audioDuration !== 'number') {
-        console.error('Invalid audioDuration:', audioDuration);
-        throw new Error('Invalid audioDuration');
-    }
-
-    if (!userId || typeof userId !== 'string') {
-        console.error('Invalid userId:', userId);
-        throw new Error('Invalid userId');
-    }
-
-    if (!userPlan || typeof userPlan !== 'object') {
-        console.error('Invalid userPlan:', userPlan);
-        throw new Error('Invalid userPlan');
-    }
-
-    logInfo(`Processing background task for user ${userId}`, path.basename(__filename));
+    const startTime = Date.now();
+    console.log(`Starting job ${job.id} at ${new Date().toISOString()}`);
 
     try {
-        // Download audio buffer
-        const buffer = await downloadBlob(userId, fileName);
-        await fs.writeFile("ahy.wav", buffer);
+        // Destructure and validate job data
+        const { fileName, fileDuration, userId, userPlan } = validateJobData(job.data);
 
-        if (!buffer) {
-            throw new Error('Audio buffer download failed');
-        }
+        // Log job start with key details
+        logInfo(`Starting transcription for user ${userId}, file: ${fileName}`, path.basename(__filename));
 
-        const combinedTranscription = [];
-        let failedChunks = 0;
-        audioDuration = parseFloat(audioDuration, 10);
-
-        const chunkDuration = 200; // 200 seconds
-        const chunks = Math.ceil(audioDuration / chunkDuration);
-
-        // Calculate bytes per chunk while maintaining WAV block alignment
-        const bytesPerSecond = buffer.length / audioDuration;
-        const bytesPerChunk = Math.floor(bytesPerSecond * chunkDuration);
-        // Ensure bytesPerChunk is aligned with the block size (4 bytes for 16-bit stereo)
-        const blockAlign = 4; // 2 channels * 16 bits per sample / 8 bits per byte
-        const alignedBytesPerChunk = Math.floor(bytesPerChunk / blockAlign) * blockAlign;
-
-        console.log(`Bytes per chunk: ${alignedBytesPerChunk}`);
-
-        const promises = [];
-
-        // Process each chunk
-        for (let i = 0; i < chunks; i++) {
-            const startByte = i * alignedBytesPerChunk;
-            const endByte = Math.min((i + 1) * alignedBytesPerChunk, buffer.length);
-
-            // Ensure the chunk starts and ends at valid sample boundaries
-            const audioChunk = buffer.slice(startByte, endByte);
-            const chunkWavOutputPath = path.join(__dirname, `chunk-${userId}-${i}-${Date.now()}.wav`);
-
-            // Create WAV header with correct sample rate and format matching the source
-            const wavHeader = createWAVHeader(
-                audioChunk.length,
-                44100,  // Sample rate should match your source audio
-                2,      // Number of channels (stereo)
-                16      // Bit depth
-            );
-
-            const wavChunk = Buffer.concat([wavHeader, audioChunk]);
-
-            const promise = (async () => {
-                try {
-                    // Write the chunk with proper WAV header
-                    await fs.writeFile(chunkWavOutputPath, wavChunk);
-                    const chunkTranscription = await fromFile(chunkWavOutputPath);
-
-                    if (!chunkTranscription) {
-                        logError(`Transcription failed for chunk ${i}`, path.basename(__filename));
-                        failedChunks++;
-                    } else {
-                        combinedTranscription.push(chunkTranscription);
-                    }
-                } catch (err) {
-                    logError(`Error processing chunk ${i}: ${err.message}`, path.basename(__filename));
-                    failedChunks++;
-                } finally {
-                    try {
-                        // Clean up chunk file
-                        await fs.unlink(chunkWavOutputPath);
-                    } catch (unlinkErr) {
-                        logError(`Error deleting chunk file ${i}: ${unlinkErr.message}`, path.basename(__filename));
-                    }
-                }
-            })();
-
-            promises.push(promise);
-        }
-
-        // Wait for all chunks to process
-        await Promise.all(promises);
-        if (failedChunks > 0) {
-            logError(`${failedChunks} chunks failed during transcription`, path.basename(__filename));
-        }
-
-        const combinedText = combinedTranscription.join(' ');
-        if (!combinedText) {
-            logError('Combined transcription text is empty. Skipping blog generation.', path.basename(__filename));
-            return 'Combined transcription text is empty. Skipping blog generation.';
-        }
-
-        // Generate blog post
-        let { title, content, tag } = await generateBlogFromText(combinedText);
-        let retry = 2;
-        while (title === 'Error' && retry-- > 0) {
-            console.log('Retrying blog generation...');
-            const result = await generateBlogFromText(combinedText);
-            title = result.title;
-            content = result.content;
-            tag = result.tag;
-        }
-
-        if (title === 'Error') {
-            logError('Failed to generate blog after multiple attempts.', path.basename(__filename));
-            return 'Failed to generate blog after multiple attempts.';
-        }
-
-        // Create blog post in database
-        await prisma.post.create({
-            data: {
-                userId,
-                title,
-                tags: tag,
-                content,
-            },
+        // Process the transcription job with progress tracking
+        const result = await processTranscriptionJob({
+            fileName,
+            audioDuration: fileDuration,
+            userId,
+            userPlan,
+            job
         });
 
-        // Update user and subscription in a transaction
-        await prisma.$transaction([
-            prisma.user.update({
-                where: { id: userId },
-                data: { blogCount: { increment: 1 } },
-            }),
-            prisma.subscription.update({
-                where: { userId },
-                data: { remainingPosts: { decrement: 1 } },
-            }),
-        ]);
+        const processingTime = (Date.now() - startTime) / 1000;
+        logInfo(`Job ${job.id} completed successfully in ${processingTime}s`, path.basename(__filename));
 
-        // Send email notification
-        await sendBlogReadyEmail(userPlan.user.email, userPlan.user.name, title);
-
-        return {}; // Return an empty object as successful job result
+        return result;
 
     } catch (error) {
-        logError(error.message, path.basename(__filename), 'inside redis configuration');
-        throw error; // Propagate the error
+        logError(`Job ${job.id} failed: ${error.message}`, path.basename(__filename));
+        sendFailureEmail(userPlan.user.email, userPlan.user.name)
+        throw error;
     }
 });
+function validateJobData(data) {
+    const { fileName, fileDuration, userId, userPlan } = data;
+
+    const validationRules = [
+        {
+            condition: !fileName || typeof fileName !== 'string',
+            message: 'Invalid fileName'
+        },
+        {
+            condition: !fileDuration || isNaN(parseFloat(fileDuration)),
+            message: 'Invalid fileDuration'
+        },
+        {
+            condition: !userId || typeof userId !== 'string',
+            message: 'Invalid userId'
+        },
+        {
+            condition: !userPlan || typeof userPlan !== 'object',
+            message: 'Invalid userPlan'
+        }
+    ];
+
+    const error = validationRules.find(rule => rule.condition);
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return {
+        fileName,
+        fileDuration: parseFloat(fileDuration),
+        userId,
+        userPlan
+    };
+}
+async function processTranscriptionJob({ fileName, audioDuration, userId, userPlan, job }) {
+    try {
+        // Download and validate audio file
+        const buffer = await downloadAudioFile(fileName, userId);
+
+        // Transcribe audio with progress tracking
+        const transcription = await transcribeWithProgress(buffer, audioDuration, userId, job);
+
+        // Generate blog content with retries
+        const blogContent = await generateBlogContent(transcription);
+
+        // Save results to database
+        await saveResults(blogContent, userId, userPlan);
+
+        return { success: true };
+
+    } catch (error) {
+        logError(`Processing failed: ${error.message}`, path.basename(__filename));
+        throw error;
+    }
+}
+
+// Audio file download and validation
+async function downloadAudioFile(fileName, userId) {
+    const buffer = await downloadBlob(userId, fileName);
+    if (!buffer) {
+        throw new Error('Audio buffer download failed');
+    }
+
+    // Save temporary file for debugging if needed
+    //await fs.writeFile("debug_audio.wav", buffer);
+
+    return buffer;
+}
+async function saveResults({ title, content, tag }, userId, userPlan) {
+    try {
+        await prisma.$transaction(async (prisma) => {
+            // Create blog post
+            await prisma.post.create({
+                data: {
+                    userId,
+                    title,
+                    tags: tag,
+                    content,
+                }
+            });
+
+            // Update user metrics
+            await prisma.user.update({
+                where: { id: userId },
+                data: { blogCount: { increment: 1 } }
+            });
+
+            // Update subscription
+            await prisma.subscription.update({
+                where: { userId },
+                data: { remainingPosts: { decrement: 1 } }
+            });
+        });
+
+        // Send notification email
+        await sendBlogReadyEmail(userPlan.user.email, userPlan.user.name, title);
+
+    } catch (error) {
+        logError(`Database operation failed: ${error.message}`, path.basename(__filename));
+        throw error;
+    }
+}
+
+async function generateBlogContent(transcription) {
+    const MAX_RETRIES = 2;
+    let retries = MAX_RETRIES;
+    let blogContent;
+
+    while (retries >= 0) {
+        try {
+            blogContent = await generateBlogFromText(transcription);
+
+            if (blogContent.title === 'Error') {
+                if (retries === 0) {
+                    throw new Error('Failed to generate blog after all retries');
+                }
+                logInfo(`Blog generation attempt failed, ${retries} retries remaining`, path.basename(__filename));
+                retries--;
+                continue;
+            }
+
+            return blogContent;
+
+        } catch (error) {
+            if (retries === 0) throw error;
+            retries--;
+            logError(`Blog generation error, retrying... ${retries} attempts remaining`, path.basename(__filename));
+        }
+    }
+}
+
+async function processChunksInParallel(audioChunks, maxConcurrent = 3) {
+    console.log(`Starting parallel processing of ${audioChunks.length} chunks`);
+    const results = new Array(audioChunks.length);
+    const inProgress = new Set();
+    const queue = [...audioChunks];
+    let errors = 0;
+    let completed = 0;
+
+    async function processNext() {
+        if (queue.length === 0) return;
+
+        const { path: chunkPath, index } = queue.shift();
+        inProgress.add(index);
+
+        try {
+            const transcription = await fromFile(chunkPath, index);
+            results[index] = transcription;
+            completed++;
+            console.log(`✓ Chunk ${index} succeeded (${completed}/${audioChunks.length})`);
+        } catch (error) {
+            console.error(`✗ Chunk ${index} failed:`, error);
+            errors++;
+            results[index] = null;
+        } finally {
+            inProgress.delete(index);
+            // Clean up chunk file
+            try {
+                await fs.unlink(chunkPath);
+            } catch (unlinkErr) {
+                console.error(`Cleanup error for chunk ${index}:`, unlinkErr);
+            }
+        }
+
+        // Log progress
+        console.log(`Progress: ${completed}/${audioChunks.length} complete, ${errors} errors`);
+    }
+
+    // Process chunks with concurrency control
+    while (queue.length > 0 || inProgress.size > 0) {
+        while (inProgress.size < maxConcurrent && queue.length > 0) {
+            processNext();
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    return results;
+}
+async function transcribeAudio(buffer, audioDuration, userId) {
+    const chunkDuration = 200; // 200 seconds per chunk
+    const chunks = Math.ceil(audioDuration / chunkDuration);
+
+    // Calculate chunk size in bytes
+    const bytesPerSecond = buffer.length / audioDuration;
+    const bytesPerChunk = Math.floor(bytesPerSecond * chunkDuration);
+    const blockAlign = 4; // 2 channels * 16 bits per sample / 8 bits per byte
+    const alignedBytesPerChunk = Math.floor(bytesPerChunk / blockAlign) * blockAlign;
+
+    console.log(`Processing ${chunks} chunks of ${chunkDuration} seconds each`);
+
+    const chunkConfigs = [];
+
+    // Prepare chunks
+    for (let i = 0; i < chunks; i++) {
+        const startByte = i * alignedBytesPerChunk;
+        const endByte = Math.min((i + 1) * alignedBytesPerChunk, buffer.length);
+
+        const audioChunk = buffer.slice(startByte, endByte);
+        const chunkPath = path.join(__dirname, `chunk-${userId}-${i}-${Date.now()}.wav`);
+
+        const wavHeader = createWAVHeader(audioChunk.length);
+        const wavChunk = Buffer.concat([wavHeader, audioChunk]);
+
+        await fs.writeFile(chunkPath, wavChunk);
+
+        chunkConfigs.push({
+            path: chunkPath,
+            index: i
+        });
+    }
+
+    // Process all chunks
+    const results = await processChunksInParallel(chunkConfigs, 3); // Process 3 chunks at a time
+
+    // Combine results in order, filtering out failed chunks
+    const transcription = results
+        .filter(result => result !== null)
+        .join(' ');
+
+    return transcription;
+}
+async function transcribeWithProgress(buffer, audioDuration, userId, job) {
+    try {
+        // Update job progress
+        job.progress(0);
+
+        const transcription = await transcribeAudio(
+            buffer,
+            audioDuration,
+            userId,
+            (progress) => {
+                job.progress(Math.floor(progress * 50)); // First 50% of total progress
+            }
+        );
+
+        if (!transcription) {
+            throw new Error('Transcription failed to produce results');
+        }
+
+        return transcription;
+
+    } catch (error) {
+        logError(`Transcription error: ${error.message}`, path.basename(__filename));
+        throw error;
+    }
+}
+
 
 
 
@@ -298,7 +413,7 @@ async function getFailedJobs() {
 setInterval(() => {
     getQueueStats();
     getFailedJobs()
-}, [10000]);
+}, [300000]);
 
 
 

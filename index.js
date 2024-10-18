@@ -103,12 +103,12 @@ app.use(session({
   store: store,
   name: "voiceblogify",
   cookie: {
-    secure: false,  // Only send cookies over HTTPS
+    secure: true,  // Only send cookies over HTTPS
     httpOnly: true,  // Prevent client-side JavaScript from accessing the cookies
     maxAge: 1000 * 60 * 60 * 24,  // 1 day session expiration
-    sameSite: 'lax',  // SameSite attribute for cross-site request protection
+    sameSite: 'none',  // SameSite attribute for cross-site request protection
   },
-  proxy: false,  // Trust the reverse proxy (if using one)
+  proxy: true,  // Trust the reverse proxy (if using one)
 }));
 
 // Initialize Passport for authentication
@@ -117,13 +117,6 @@ app.use(passport.session());
 
 
 
-// const csrfProtection = csurf({ cookie: true });
-// app.use(csrfProtection);
-
-// //Route for handling CSRF tokens in client-side requests
-// app.get('/csrf-token', (req, res) => {
-//   res.json({ csrfToken: req.csrfToken() });
-// })
 
 
 

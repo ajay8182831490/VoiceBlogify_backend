@@ -9,7 +9,7 @@ import { registerUser, logoutUser, resetPassword, otpGeneration, checkAuth, pass
 const router = express.Router();
 const otpRateLimiter = rateLimit({
   windowMs: 2 * 60 * 1000,
-  max: 3,
+  max: 2,
   handler: (req, res) => {
     res.status(429).json({ message: "Too many otp request attempts, please try again later." });
   }
@@ -79,8 +79,8 @@ router.get('/auth/google/callback',
 
     req.session.accessToken = accessToken;
 
-    //const redirectUrl = req.session.returnTo || 'https://voiceblogify.in?login=success';
-    const redirectUrl = req.session.returnTo || 'http://localhost:5173?login=success';
+    const redirectUrl = req.session.returnTo || 'https://voiceblogify.in?login=success';
+    //const redirectUrl = req.session.returnTo || 'http://localhost:5173?login=success';
 
     delete req.session.returnTo;
     res.redirect(redirectUrl);

@@ -64,86 +64,149 @@ export default transcribeAudioAPI;*/
 import fs from 'fs/promises';
 import sdk from "microsoft-cognitiveservices-speech-sdk";
 
-const speechConfig = sdk.SpeechConfig.fromSubscription(process.env.azureKey, 'eastus');
 
-export async function fromFile(audioFilePath) {
+export async function fromFile(audioFilePath, chunkIndex) {
     let speechRecognizer;
     let fullTranscription = '';
+    let recognitionStarted = false;
 
     try {
         const audioData = await fs.readFile(audioFilePath);
+        const speechConfig = sdk.SpeechConfig.fromSubscription(process.env.azureKey, 'eastus');
+        speechConfig.speechRecognitionLanguage = "en-US";
+
+        // Add these settings to make recognition more robust
+        speechConfig.setProperty("MaxRetryCount", "3");
+        speechConfig.enableAudioLogging(); // Helps with debugging
+
         const audioConfig = sdk.AudioConfig.fromWavFileInput(audioData);
         speechRecognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
 
         return new Promise((resolve, reject) => {
-            // Event handler for recognized speech
+            let isCompleted = false;
+            let hasError = false;
+
+            // Recognition started event
+            speechRecognizer.recognizing = (s, e) => {
+                if (!recognitionStarted) {
+                    recognitionStarted = true;
+                    console.log(`Recognition actively processing chunk ${chunkIndex}`);
+                }
+            };
+
             speechRecognizer.recognized = (s, e) => {
                 if (e.result.reason === sdk.ResultReason.RecognizedSpeech) {
                     fullTranscription += e.result.text + ' ';
+                    console.log(`Chunk ${chunkIndex} progress: ${fullTranscription.length} chars`);
+                } else if (e.result.reason === sdk.ResultReason.NoMatch) {
+                    console.warn(`Chunk ${chunkIndex} no match. Details: ${sdk.NoMatchReason[e.result.noMatchReason]}`);
                 }
             };
 
-            // Event handler for canceled recognition
             speechRecognizer.canceled = (s, e) => {
-                console.error('Recognition canceled:', e.errorDetails);
-                stopAndCleanup();
-                reject(new Error(`Recognition canceled: ${e.errorDetails}`));
+                if (!isCompleted) {
+                    hasError = true;
+                    const errorMessage = e.errorDetails || 'Unknown error';
+                    const errorCode = e.errorCode || 'Unknown code';
+
+                    console.error(`Chunk ${chunkIndex} canceled. Error code: ${errorCode}, Details: ${errorMessage}`);
+
+                    // If we have partial transcription and it's not a critical error, we might want to return it
+                    if (fullTranscription.length > 0 && e.errorCode !== sdk.CancellationErrorCode.AuthenticationFailure) {
+                        console.warn(`Returning partial transcription for chunk ${chunkIndex}`);
+                        stopRecognition();
+                        resolve(fullTranscription.trim());
+                    } else {
+                        stopRecognition();
+                        reject(new Error(`Recognition canceled: ${errorMessage} (Code: ${errorCode})`));
+                    }
+                }
             };
 
-            // Event handler for when the session stops
             speechRecognizer.sessionStopped = (s, e) => {
-                console.log('Session stopped. Full Transcription:', fullTranscription.trim());
-                stopAndCleanup();
-                resolve(fullTranscription.trim());
-            };
-
-            // Helper function to stop recognition and cleanup
-            const stopAndCleanup = () => {
-                if (speechRecognizer) {
-                    speechRecognizer.stopContinuousRecognitionAsync(
-                        () => {
-                            speechRecognizer.close();
-                            speechRecognizer = null;
-                        },
-                        (err) => {
-                            console.error('Error stopping recognition:', err);
-                            speechRecognizer.close();
-                            speechRecognizer = null;
-                        }
-                    );
+                if (!isCompleted && !hasError) {
+                    console.log(`Chunk ${chunkIndex} completed successfully. Length: ${fullTranscription.length}`);
+                    stopRecognition();
+                    resolve(fullTranscription.trim());
                 }
             };
 
-            // Set a timeout to force stop if recognition takes too long
+            const stopRecognition = async () => {
+                if (speechRecognizer && !isCompleted) {
+                    isCompleted = true;
+                    try {
+                        await new Promise((resolveStop, rejectStop) => {
+                            const stopTimeout = setTimeout(() => {
+                                console.warn(`Force closing recognition for chunk ${chunkIndex}`);
+                                speechRecognizer.close();
+                                resolveStop();
+                            }, 5000); // Force stop after 5 seconds
+
+                            speechRecognizer.stopContinuousRecognitionAsync(
+                                () => {
+                                    clearTimeout(stopTimeout);
+                                    speechRecognizer.close();
+                                    resolveStop();
+                                },
+                                (err) => {
+                                    clearTimeout(stopTimeout);
+                                    console.error(`Error stopping chunk ${chunkIndex}:`, err);
+                                    speechRecognizer.close();
+                                    rejectStop(err);
+                                }
+                            );
+                        });
+                    } catch (err) {
+                        console.error(`Cleanup error for chunk ${chunkIndex}:`, err);
+                    } finally {
+                        speechRecognizer = null;
+                    }
+                }
+            };
+
+            // Shorter timeout and more detailed timeout handling
             const timeout = setTimeout(() => {
-                console.log('Recognition timeout - forcing stop');
-                stopAndCleanup();
-                resolve(fullTranscription.trim());
-            }, 3000000); // 30 second timeout
-
-            // Start the recognition process
-            speechRecognizer.startContinuousRecognitionAsync(
-                () => {
-                    console.log("Recognition started successfully for:", audioFilePath);
-                },
-                (error) => {
-                    console.error("Error starting recognition:", error);
-                    clearTimeout(timeout);
-                    stopAndCleanup();
-                    reject(error);
+                if (!isCompleted) {
+                    console.log(`Timeout for chunk ${chunkIndex}. Transcription length: ${fullTranscription.length}`);
+                    if (fullTranscription.length > 0) {
+                        stopRecognition();
+                        resolve(fullTranscription.trim());
+                    } else {
+                        stopRecognition();
+                        reject(new Error(`Timeout: No transcription received for chunk ${chunkIndex}`));
+                    }
                 }
-            );
-        });
+            }, 180000); // Reduced to 180 seconds
 
+            // Start recognition with better error handling
+            try {
+                speechRecognizer.startContinuousRecognitionAsync(
+                    () => {
+                        console.log(`Started recognition for chunk ${chunkIndex}`);
+                    },
+                    (error) => {
+                        if (!isCompleted) {
+                            console.error(`Start error for chunk ${chunkIndex}:`, error);
+                            clearTimeout(timeout);
+                            stopRecognition();
+                            reject(new Error(`Failed to start recognition: ${error.message || error}`));
+                        }
+                    }
+                );
+            } catch (error) {
+                clearTimeout(timeout);
+                stopRecognition();
+                reject(new Error(`Failed to initialize recognition: ${error.message || error}`));
+            }
+        });
     } catch (error) {
-        console.error('Error during transcription setup:', error);
+        console.error(`Setup error for chunk ${chunkIndex}:`, error);
         if (speechRecognizer) {
             speechRecognizer.close();
         }
         throw error;
     }
 }
-
 
 
 
