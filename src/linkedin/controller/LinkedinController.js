@@ -342,8 +342,6 @@ const createLinkedInPost = async (
             body: JSON.stringify(postData),
         });
 
-
-
         if (response.ok) {
             return res.status(201).json({
                 success: true,
