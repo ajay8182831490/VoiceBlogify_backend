@@ -86,6 +86,15 @@ export const share_linkedin = async (req, res) => {
         const video = req.files?.video;
 
 
+        if (description > length > 3000) {
+            res
+                .status(400)
+                .json({
+                    message: "You can only post either images or a video, not both.",
+                });
+        }
+
+
 
         if (images.length && video) {
             return res
@@ -128,7 +137,9 @@ export const share_linkedin = async (req, res) => {
             videoUrl
         );
 
-        console.log(postResponse);
+        console.log(postResponse)
+
+
 
         const existingToken = await prisma.token.findFirst({
             where: {
@@ -162,8 +173,8 @@ export const share_linkedin = async (req, res) => {
         });
 
         res
-            .status(200)
-            .json({ message: "Post created successfully", postResponse });
+            .status(postResponse.status)
+            .json(postResponse);
     } catch (ex) {
         logError(ex, path.basename(__filename));
         res.status(500).json({ message: "internal server error" });
@@ -322,6 +333,7 @@ const createLinkedInPost = async (
             },
         };
 
+
         const response = await fetch("https://api.linkedin.com/v2/ugcPosts", {
             method: "POST",
             headers: {
@@ -332,15 +344,9 @@ const createLinkedInPost = async (
             body: JSON.stringify(postData),
         });
 
-      
-
-        if (!response.ok) {
-    const errorData = await response.json(); // Read the response body as JSON
-    console.error('Error details:', errorData); // Log the detailed error message
-}
-
         if (response.ok) {
-            return await response.json();
+            const data = await response.json();
+            return { status: response.status, data };
         } else {
             const errorData = await response.json();
             logError(
@@ -351,8 +357,11 @@ const createLinkedInPost = async (
                 `Error Details: ${JSON.stringify(errorData)}`,
                 path.basename(__filename)
             );
-            throw new Error("Failed to post on LinkedIn");
+            return { status: response.status, error: errorData };
         }
+
+
+
     } catch (error) {
         logError(
             `Error in creating LinkedIn post: ${error.message}`,
