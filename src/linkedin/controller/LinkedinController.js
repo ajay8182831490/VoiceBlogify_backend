@@ -291,12 +291,12 @@ const createLinkedInPost = async (
         const maxDescriptionLength = 3000; // Max length for post description
 
         // Check if description exceeds max character limit
-        if (description.length > maxDescriptionLength) {
+      /*  if (description.length > maxDescriptionLength) {
             return res.status(400).json({
                 success: false,
                 message: `Post description exceeds the maximum allowed length of ${maxDescriptionLength} characters.`,
             });
-        }
+        }*/
 
         const postData = {
             author: `urn:li:person:${personId}`,
