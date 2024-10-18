@@ -137,11 +137,11 @@ export const share_linkedin = async (req, res) => {
             videoUrl
         );
 
-        console.log(postResponse)
+        //console.log(postResponse)
 
 
 
-        const existingToken = await prisma.token.findFirst({
+       /* const existingToken = await prisma.token.findFirst({
             where: {
 
                 userId: req.userId,
@@ -170,7 +170,7 @@ export const share_linkedin = async (req, res) => {
             data: {
                 postUrns: updatedPostUrns,
             },
-        });
+        });*/
 
         res
             .status(postResponse.status)
