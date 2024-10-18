@@ -159,9 +159,7 @@ export const share_linkedin = async (req, res) => {
             },
         });
 
-        res
-            .status(200)
-            .json({ message: "Post created successfully", postResponse });
+        return res.status(postResponse.status).json(postResponse);
     } catch (ex) {
         logError(ex, path.basename(__filename));
         res.status(500).json({ message: "internal server error" });
@@ -343,74 +341,28 @@ const createLinkedInPost = async (
         });
 
         if (response.ok) {
-            return res.status(201).json({
-                success: true,
-                message: "Post created successfully on LinkedIn.",
-
-            });
+            return { status: 201, success: true, message: "Post created successfully on LinkedIn." };
         } else {
-            // Handle specific LinkedIn API errors based on status codes
-            if (response.status === 400) {
-                return res.status(400).json({
-                    success: false,
-                    message: `Bad Request: ${data.message}`,
-                });
-            } else if (response.status === 401) {
-                return res.status(401).json({
-                    success: false,
-                    message: `Unauthorized: Invalid or expired access token.`,
-                });
-            } else if (response.status === 403) {
-                return res.status(403).json({
-                    success: false,
-                    message: `Forbidden: Access is denied.`,
-                });
-            } else if (response.status === 404) {
-                return res.status(404).json({
-                    success: false,
-                    message: `Not Found: The resource does not exist.`,
-                });
-            } else if (response.status === 409) {
-                return res.status(409).json({
-                    success: false,
-                    message: `Conflict: Duplicate content detected.`,
-                });
-            } else if (response.status === 413) {
-                return res.status(413).json({
-                    success: false,
-                    message: `Payload Too Large: The post content is too long.`,
-                });
-            } else if (response.status === 422) {
-                return res.status(422).json({
-                    success: false,
-                    message: `Unprocessable Entity: ${data.message}`,
-                });
-            } else if (response.status === 429) {
-                return res.status(429).json({
-                    success: false,
-                    message: `Too Many Requests: You've hit LinkedIn's rate limit.`,
-                });
-            } else if (response.status === 500) {
-                return res.status(500).json({
-                    success: false,
-                    message: `Internal Server Error: Something went wrong on LinkedIn's side.`,
-                });
-            } else {
-                return res.status(response.status).json({
-                    success: false,
-                    message: `Unexpected error: ${response.statusText}`,
-                });
-            }
+            const errorMessages = {
+                400: `Bad Request: ${data.message}`,
+                401: `Unauthorized: Invalid or expired access token.`,
+                403: `Forbidden: Access is denied.`,
+                404: `Not Found: The resource does not exist.`,
+                409: `Conflict: Duplicate content detected.`,
+                413: `Payload Too Large: The post content is too long.`,
+                422: `Unprocessable Entity: ${data.message}`,
+                429: `Too Many Requests: You've hit LinkedIn's rate limit.`,
+                500: `Internal Server Error: Something went wrong on LinkedIn's side.`,
+            };
+
+            return { status: response.status, success: false, message: errorMessages[response.status] || `Unexpected error: ${response.statusText}` };
         }
     } catch (error) {
-        // Log the error and return a 500 status code for internal errors
         logError(`Error in creating LinkedIn post: ${error.message}`, path.basename(__filename), createLinkedInPost);
-        return res.status(500).json({
-            success: false,
-            message: `LinkedIn post creation failed: ${error.message}`,
-        });
+        return { status: 500, success: false, message: `LinkedIn post creation failed: ${error.message}` };
     }
 };
+
 
 
 const uploadVideo = async (uploadUrl, videoBuffer) => {
