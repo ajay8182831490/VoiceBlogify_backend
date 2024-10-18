@@ -44,40 +44,49 @@ const transporter = nodemailer.createTransport({
 
 
 });
-const sendEmail = (email, content) => {
+const sendEmail = (email, subject, content) => {
     const mailOptions = {
         from: process.env.email,
         to: email,
-        subject: 'reset password',
+        subject: subject,
         html: content
     };
 
-
-
-    transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-            console.log(error);
-        } else {
-            console.log('Email sent: ' + info.response);
-        }
+    return new Promise((resolve, reject) => {
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                console.log(error);
+                reject(error); // Reject the promise on error
+            } else {
+                console.log('Email sent: ' + info.response);
+                resolve(info.response); // Resolve the promise on success
+            }
+        });
     });
 };
-const sendEmailforOtp = (email, otp) => {
+
+const sendEmailforOtp = async (email, otp) => {
     const mailOptions = {
         from: process.env.email,
         to: email,
-        subject: 'verify account',
-        html: `<p>your one time password (otp) is ${otp}
-  </p>`,
+        subject: 'Verify Account',
+        html: `<p>Your one-time password (OTP) is ${otp}</p>`,
     };
 
-    transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-            console.log(error);
-        } else {
-            console.log('Email sent: ' + info.response);
-        }
-    });
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log('Email sent: ' + info.response);
+    } catch (error) {
+        console.log(error);
+    }
+};
+
+
+const sendPaymentSuccessEmail = async (userEmail, userName, paymentAmount) => {
+    const subject = 'Payment Successful - Thank You!';
+    const text = `Hello ${userName},\n\nThank you for your payment of ${paymentAmount}!\n\nWe appreciate your promptness, and we're thrilled to have you with us. Your subscription will continue without interruption, and you can enjoy all the features our service offers.\n\nIf you have any questions or need assistance, feel free to reach out to our support team.\n\nBest regards,\nThe VoiceBlogify Team`;
+
+    await sendEmail(userEmail, subject, text);
 };
 const generateOTP = () => {
     const otpLength = 4;
@@ -97,7 +106,8 @@ export {
     getToken,
     sendEmail,
     generateOTP,
-    sendEmailforOtp
+    sendEmailforOtp,
+    sendPaymentSuccessEmail
 
 
 }

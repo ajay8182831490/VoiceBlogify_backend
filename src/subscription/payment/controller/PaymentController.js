@@ -8,6 +8,7 @@ import { _decodeChunks } from "openai/streaming.mjs";
 const prisma = new PrismaClient();
 import { ensureAuthenticated } from "../../../middleware/authMiddleware.js";
 import { fileURLToPath } from "url";
+import { sendPaymentSuccessEmail } from "../../../utils/util.js";
 
 const __filename = fileURLToPath(import.meta.url);
 
@@ -320,6 +321,7 @@ const handlePaymentSubcription = async (
                 isVerified: true
             }
         })
+        //await sendPaymentSuccessEmail()
 
 
     } catch (error) {

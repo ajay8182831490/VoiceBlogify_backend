@@ -17,6 +17,7 @@ import userRouter from './src/user/Routes/userRoutes.js';
 import paypalpayment from './src/subscription/payment/controller/PaymentController.js';
 import helmet from 'helmet';
 import csurf from 'csurf';
+import cron from './src/utils/cronjob.js'
 
 dotenv.config();
 
@@ -114,6 +115,7 @@ app.use(session({
 // Initialize Passport for authentication
 app.use(passport.initialize());
 app.use(passport.session());
+cron.start()
 
 
 
