@@ -13,7 +13,7 @@ dotenv.config();
 const genAI = new GoogleGenerativeAI(process.env.Google_GEMNI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-export const generateBlogFromText = async ({transcribedText,blogType,blogTone}) => {
+export const generateBlogFromText = async (transcribedText,blogType,blogTone) => {
     try {
      console.log(blogType,blogTone,"inside the blog");
 
