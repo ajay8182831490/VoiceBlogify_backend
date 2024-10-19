@@ -90,7 +90,8 @@ passport.use(new GoogleStrategy({
           profilepic: photos?.[0]?.value,
           userAccessToken: token,
           isVerified: true,
-          RefreshToken: refreshToken
+          RefreshToken: refreshToken,
+          lastActiveDay: new Date()
         },
       });
     } else {
