@@ -138,6 +138,9 @@ app.use(postOperation);
 app.use(bloggerRoutes);
 app.use(userRouter);
 app.use(paypalpayment);
+app.get('/keep-alive', (req, res) => {
+  res.status(200).json({ message: "i am alive" })
+})
 
 // Keep-alive cron job to prevent server sleep
 const job = new CronJob('*/5 * * * *', async () => {
