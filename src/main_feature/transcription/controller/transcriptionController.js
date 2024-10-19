@@ -29,7 +29,7 @@ import { extractAudioFromVideo, checkUserPlan, getAudioDuration } from '../utili
 function sanitizeFileName(fileName) {
     return fileName.replace(/[^a-zA-Z0-9_\.]/g, '');
 }
-const addJobToQueue = async (userId, fileName, fileDuration, userPlan) => {
+const addJobToQueue = async (userId, fileName, fileDuration, userPlan,blogType,blogTone) => {
     if (!userId || !fileName || !fileDuration || !userPlan) {
         console.error('Invalid input data:', { userId, fileName, fileDuration, userPlan });
         return;
@@ -37,7 +37,7 @@ const addJobToQueue = async (userId, fileName, fileDuration, userPlan) => {
 
     try {
         const job = await transcriptionQueue.add(
-            { userId, fileName, fileDuration, userPlan },
+            { userId, fileName, fileDuration, userPlan,blogType,blogTone },
             { attempts: 1, delay: 1000, removeOnComplete: true } // Retry with backoff
         );
         console.log('Job added to queue successfully:', job.id);
@@ -100,8 +100,14 @@ export const recordTranscription = async (req, res) => {
 
     let fileName, fileDuration;
     let tempFileName = `output-${userId}-${Date.now()}.wav`;
+      const { blogType,
+        blogTone } = req.body;
 
+    if (!blogType || !blogTone) {
+        return res.status(400).json({ message: "missing field required" });
+    }
 
+  console.log(blogType,blogTone);
     // Validate file presence
     const file = req.file;
 
@@ -185,7 +191,7 @@ export const recordTranscription = async (req, res) => {
         }
 
         try {
-            await addJobToQueue(userId, fileName, fileDuration, userPlan);
+            await addJobToQueue(userId, fileName, fileDuration, userPlan,blogType,blogTone);
         } catch (queueError) {
             logError(queueError, path.basename(__filename), 'Error adding job to queue');
             return res.status(500).json({ message: "Failed to add transcription job to queue" });
