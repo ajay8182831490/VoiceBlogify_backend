@@ -100,7 +100,7 @@ transcriptionQueue.process(async (job) => {
     try {
         // Destructure and validate job data
         const { fileName, fileDuration, userId, userPlan,blogType,blogTone } = validateJobData(job.data);
-        const {
+        console.log("inside process",blogType,blogTone );
 
         // Log job start with key details
         logInfo(`Starting transcription for user ${userId}, file: ${fileName}`, path.basename(__filename));
@@ -168,7 +168,7 @@ async function processTranscriptionJob({ fileName, audioDuration, userId, userPl
         const transcription = await transcribeWithProgress(buffer, audioDuration, userId, job);
 
         // Generate blog content with retries
-        const blogContent = await generateBlogContent(transcription,blogType,blogTone);
+        const blogContent = await generateBlogContent({transcription,blogType,blogTone});
 
         // Save results to database
         await saveResults(blogContent, userId, userPlan);
@@ -228,7 +228,7 @@ async function saveResults({ title, content, tag }, userId, userPlan) {
     }
 }
 
-async function generateBlogContent(transcription,blogType,blogTone) {
+async function generateBlogContent({transcription,blogType,blogTone}) {
     const MAX_RETRIES = 2;
     let retries = MAX_RETRIES;
     let blogContent;
