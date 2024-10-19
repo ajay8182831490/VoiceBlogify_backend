@@ -13,9 +13,9 @@ dotenv.config();
 const genAI = new GoogleGenerativeAI(process.env.Google_GEMNI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-export const generateBlogFromText = async (transcribedText) => {
+export const generateBlogFromText = async (transcribedText,blogType,blogTone) => {
     try {
-
+     console.log(blogType,blogTone,"inside the blog");
 
         const prompt = `
         Task: Generate a high-quality, professional blog post based on the provided transcribed audio content. The blog should reflect the speaker’s tone, style, and intent while being authentic, engaging, and informative. The output should be well-structured, reader-friendly, and include dynamic elements like bullet points, numbered lists, and relevant tags wherever applicable.
