@@ -38,11 +38,11 @@ const startCronJobs = () => {
             await prisma.user.updateMany({
                 where: {
                     otp: { not: null },
-                    otpExpiry: { lte: currentTime },
+                    expiryTime: { lte: currentTime },
                 },
                 data: {
                     otp: null,
-                    otpExpiry: null,
+                    expiryTime: null,
                 },
             });
             console.log('Expired OTPs have been nullified.');
@@ -52,19 +52,32 @@ const startCronJobs = () => {
     });
 
     // 2. Remove Token Keys for Inactive Users
+
     cron.schedule('0 0 * * *', async () => {
         try {
             const currentTime = new Date();
             const expirationTime = new Date();
             expirationTime.setDate(expirationTime.getDate() - 7);
+            console.log(expirationTime)
 
             await prisma.user.updateMany({
                 where: {
-                    lastActive: { lte: expirationTime },
-                    tokenKey: { not: null },
+                    lastActiveDay: { lte: expirationTime },
+                    userAccessToken: { not: null },
                 },
                 data: {
-                    tokenKey: null,
+                    userAccessToken: null,
+                    RefreshToken: null,
+                },
+            });
+
+            // Then, delete tokens from the Token table for those inactive users
+            await prisma.token.deleteMany({
+                where: {
+                    user: {
+                        lastActiveDay: { lte: expirationTime },
+                        //userAccessToken: { not: null },
+                    },
                 },
             });
             console.log('Token keys of inactive users have been removed.');
@@ -82,11 +95,11 @@ const startCronJobs = () => {
 
             const users = await prisma.subscription.findMany({
                 where: {
-                    expiryDate: {
+                    nextDueDate: {
                         gte: currentTime,
                         lt: expirationTime,
                     },
-                    isActive: true,
+                    status: 'ACTIVE',
                 },
                 include: {
                     user: true,
@@ -112,25 +125,35 @@ const startCronJobs = () => {
         try {
             const currentTime = new Date();
 
-            const expiredSubscriptions = await prisma.subscription.updateMany({
+            // First, update subscriptions that meet the condition
+            await prisma.subscription.updateMany({
                 where: {
-                    expiryDate: { lt: currentTime },
-                    isActive: true,
+                    nextDueDate: { lt: currentTime },
+                    status: 'ACTIVE',
                 },
                 data: {
                     remainingPosts: 0,
-                    isActive: false,
+                    status: 'DISABLED',
                 },
-                returning: true, // Get the updated subscriptions for further processing
+            });
+
+            // Fetch the updated subscriptions to send emails
+            const expiredSubscriptions = await prisma.subscription.findMany({
+                where: {
+                    nextDueDate: { lt: currentTime },
+                    status: 'DISABLED',
+                },
             });
 
             for (const subscription of expiredSubscriptions) {
                 const user = await prisma.user.findUnique({ where: { id: subscription.userId } });
-                await sendEmail(
-                    user.email,
-                    'Subscription Expired',
-                    `Hello ${user.name}, your subscription has expired. Please renew to regain full access to our services.`
-                );
+                if (user) {
+                    await sendEmail(
+                        user.email,
+                        'Subscription Expired',
+                        `Hello ${user.name}, your subscription has expired. Please renew to regain full access to our services.`
+                    );
+                }
             }
 
             console.log('User subscriptions have been updated after expiry, and emails have been sent.');
@@ -138,10 +161,7 @@ const startCronJobs = () => {
             console.error('Error updating user subscriptions and sending expiry emails:', error);
         }
     });
-};
-// cron.schedule('* * * * *', () => {
-//     console.log('This message prints every minute');
-// });
 
-// Export the start function
+};
+
 export default { start: startCronJobs };
