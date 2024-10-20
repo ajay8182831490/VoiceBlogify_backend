@@ -96,10 +96,10 @@ const createWAVHeader = (chunkSize, sampleRate = 44100, numChannels = 2, bitDept
 transcriptionQueue.process(async (job) => {
     const startTime = Date.now();
     console.log(`Starting job ${job.id} at ${new Date().toISOString()}`);
-
+      const { fileName, fileDuration, userId, userPlan,blogType,blogTone } = validateJobData(job.data);
     try {
         // Destructure and validate job data
-        const { fileName, fileDuration, userId, userPlan,blogType,blogTone } = validateJobData(job.data);
+        
         console.log("inside process",blogType,blogTone );
 
         // Log job start with key details
@@ -116,7 +116,7 @@ transcriptionQueue.process(async (job) => {
 
         const processingTime = (Date.now() - startTime) / 1000;
         logInfo(`Job ${job.id} completed successfully in ${processingTime}s`, path.basename(__filename));
-
+       console.log(result);
         return result;
 
     } catch (error) {
