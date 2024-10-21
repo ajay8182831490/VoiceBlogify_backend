@@ -145,7 +145,7 @@ app.get('/keep-alive', (req, res) => {
 // Keep-alive cron job to prevent server sleep
 const job = new CronJob('*/5 * * * *', async () => {
   try {
-    await fetch('https://voiceblogify-backend.onrender.com/keep-alive', { timeout: 10000 });
+    await fetch('https://api.voiceblogify.in/keep-alive', { timeout: 10000 });
   } catch (error) {
     console.error('Error keeping alive:', error);
   }

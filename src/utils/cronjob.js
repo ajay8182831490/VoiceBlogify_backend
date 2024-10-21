@@ -53,7 +53,7 @@ const startCronJobs = () => {
 
     // 2. Remove Token Keys for Inactive Users
 
-    cron.schedule('0 0 * * *', async () => {
+    /*cron.schedule('0 0 * * *', async () => {
         try {
             const currentTime = new Date();
             const expirationTime = new Date();
@@ -84,7 +84,7 @@ const startCronJobs = () => {
         } catch (error) {
             console.error('Error removing token keys:', error);
         }
-    });
+    });*/
 
     // 3. Send Subscription Reminder Email When 2 Days Remain
     cron.schedule('0 9 * * *', async () => {

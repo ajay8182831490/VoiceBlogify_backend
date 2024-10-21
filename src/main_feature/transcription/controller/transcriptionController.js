@@ -12,6 +12,7 @@ import { PassThrough } from 'stream';
 
 import { generateBlogFromText } from '../../voice_to_text/blogGeneration.js';
 import sendBlogReadyEmail, { sendFailureEmail } from '../utility/email.js';
+import { sendFailureEmail1 } from '../utility/email.js';
 import transcriptionQueue from '../utility/RedisConfiguration.js';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -177,7 +178,7 @@ async function processFileAfterResponse(file, fileType, fileName, userId, blogTy
             if (!Buffer) {
                 errorCause = "Audio extraction from video failed";
                 logError(errorCause, path.basename(__filename), 'processFileAfterResponse');
-                await sendFailureEmail(userId, errorCause);  // Send failure email
+                await sendFailureEmail1(userPlan?.user?.email, errorCause);  // Send failure email
                 return;
             }
         }
@@ -193,7 +194,7 @@ async function processFileAfterResponse(file, fileType, fileName, userId, blogTy
         if (!userPlan) {
             errorCause = `No active subscription plan for user ${userId}`;
             logError(errorCause, path.basename(__filename), 'processFileAfterResponse');
-            await sendFailureEmail(userId, errorCause);  // Send failure email
+            await sendFailureEmail1(userPlan?.user?.email, errorCause);  // Send failure email
             return;
         }
 
@@ -202,14 +203,14 @@ async function processFileAfterResponse(file, fileType, fileName, userId, blogTy
         if (fileDuration > maxAllowedDuration) {
             errorCause = `Audio duration exceeds allowed limit for user plan`;
             logError(errorCause, path.basename(__filename), 'processFileAfterResponse');
-            await sendFailureEmail(userPlan?.user?.email, errorCause);  // Send failure email
+            await sendFailureEmail1(userPlan?.user?.email, errorCause);  // Send failure email
             return;
         }
 
         if (fileDuration < 60) {
             errorCause = `Audio duration too short for processing`;
             logError(errorCause, path.basename(__filename), 'processFileAfterResponse');
-            await sendFailureEmail(userPlan?.user?.email, errorCause);  // Send failure email
+            await sendFailureEmail1(userPlan?.user?.email, errorCause);  // Send failure email
             return;
         }
 
@@ -232,7 +233,7 @@ async function processFileAfterResponse(file, fileType, fileName, userId, blogTy
         // If upload failed after retries, log and notify
         if (!uploadSuccess) {
             logError(errorCause, path.basename(__filename), 'processFileAfterResponse');
-            await sendFailureEmail(userPlan?.user?.email, errorCause);  // Send failure email
+            await sendFailureEmail1(userPlan?.user?.email, errorCause);  // Send failure email
             return;
         }
 
@@ -243,7 +244,7 @@ async function processFileAfterResponse(file, fileType, fileName, userId, blogTy
     } catch (error) {
         errorCause = `Error in background processing: ${error.message}`;
         logError(errorCause, path.basename(__filename), 'processFileAfterResponse');
-        await sendFailureEmail(userPlan?.user?.email, errorCause);  // Send failure email
+        await sendFailureEmail1(userPlan?.user?.email, errorCause);  // Send failure email
     }
 }
 
