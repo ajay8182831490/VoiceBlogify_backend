@@ -45,7 +45,10 @@ const cspConfig = {
   },
 };
 app.use(helmet.contentSecurityPolicy(cspConfig));
-
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Credentials', 'true');
+  next();
+});
 
 
 // Security headers for protection against XSS, clickjacking, etc.
@@ -71,9 +74,9 @@ app.use(limiter);
 // CORS configuration
 const corsOptions = {
   origin: ['https://www.voiceblogify.in', 'https://voiceblogify.netlify.app', 'http://localhost:5173'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
   exposedHeaders: ['Set-Cookie'],
 };
 app.use(cors(corsOptions));
@@ -102,15 +105,17 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   store: store,
-  name: "voiceblogify",
+  name: 'voiceblogify',
   cookie: {
-    secure: true,  // Only send cookies over HTTPS
-    httpOnly: true,  // Prevent client-side JavaScript from accessing the cookies
-    maxAge: 1000 * 60 * 60 * 24,  // 1 day session expiration
-    sameSite: 'none',  // SameSite attribute for cross-site request protection
+    secure: true,
+    httpOnly: true,
+    maxAge: 1000 * 60 * 60 * 24, // 1 day
+    sameSite: 'none',
+    path: '/',
+    domain: '.voiceblogify.in'  // Note the dot prefix for subdomain support
   },
-  proxy: true,  // Trust the reverse proxy (if using one)
-}));
+  proxy: true
+}))
 
 // Initialize Passport for authentication
 app.use(passport.initialize());
