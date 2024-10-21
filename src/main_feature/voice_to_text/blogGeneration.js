@@ -391,57 +391,58 @@ export const generateBlogFromText = async (transcribedText, blogType, blogTone) 
 
         // Prepare the prompt using the provided transcribed text, blog type, and tone
         const prompt = `
-Transform this audio transcript into an engaging ${blogType} blog post that feels genuinely human and valuable.
+Imagine you're having a casual conversation with a friend about this topic. 
+        Transform this audio transcript into a relatable and engaging ${blogType} blog post.
 
-TRANSCRIBED TEXT: ${transcribedText}
+        Here’s the transcribed text: 
+        ${transcribedText}
 
-BLOG TYPE: ${typeDescriptions[blogType].description}
+        Write it as if you're sharing your thoughts over coffee—friendly, personal, and engaging. 
+        Feel free to include anecdotes, ask rhetorical questions, and express your genuine thoughts.
 
-TONE: ${toneDescriptions[blogTone].description}
+        **SEO-Optimized Title**: Provide a catchy title that captures the essence of the blog.
 
-REQUIRED OUTPUT FORMAT:
+        **Structure**:
+        <article>
+          <h1>[Your Main Title Here]</h1>
+          <p>[Introductory paragraph with a hook that draws the reader in.]</p>
+          
+          <h2>[Major Section Title]</h2>
+          <p>[Main content with logical flow, engaging style, and personal insights.]</p>
+          
+          <h3>[Subsection Title]</h3>
+          <p>[Additional details, examples, or personal stories here.]</p>
+        </article>
 
-<title>
-[Your SEO-optimized title here]
-</title>
+        **Tags**: 
+        <span>[tag1], [tag2], [tag3], [tag4], [tag5]</span>
 
-<article>
-[h1 for main title]
-[p]Introductory paragraph with hook here.[/p]
-[h2 for major section if needed]
-[p]Main content here with logical flow.[/p]
-<h3 for subsection if needed>
-[p]Additional details or examples here.[/p]
-</article>
+        **MUST-INCLUDE ELEMENTS**:
+        ${typeDescriptions[blogType].mustInclude.map(item => `• ${item}`).join('\n')}
 
-<span>[tag1], [tag2], [tag3], [tag4], [tag5]</span> <!-- This line is now outside the article -->
+        **ORGANIZATION INSTRUCTIONS**:
+        If the content appears disorganized, ensure to:
+        1. Identify main themes or sections.
+        2. Rearrange the content for logical flow.
+        3. Use headings and subheadings for clarity.
+        4. Ensure smooth transitions between sections.
+        5. Use bullet points or lists for clarity where appropriate.
 
-MUST-INCLUDE ELEMENTS:
-${typeDescriptions[blogType].mustInclude.map(item => `• ${item}`).join('\n')}
+        **WRITING STYLE GUIDELINES**:
+        - **Language**: ${toneDescriptions[blogTone].stylistics.language}
+        - **Sentence Style**: ${toneDescriptions[blogTone].stylistics.sentences}
 
-ORGANIZATION INSTRUCTIONS:
-If the content appears disorganized, ensure to:
-1. Identify main themes or sections.
-2. Rearrange the content into a logical flow.
-3. Use headings and subheadings for clarity.
-4. Ensure each section connects well with the next.
-5. Use bullet points or lists for clarity where appropriate.
+        **NATURAL TRANSITIONS TO USE**:
+        ${toneDescriptions[blogTone].stylistics.transitions.join('\n')}
 
-WRITING STYLE GUIDELINES:
-Language: ${toneDescriptions[blogTone].stylistics.language}
-Sentence Style: ${toneDescriptions[blogTone].stylistics.sentences}
+        **AUTHENTIC EXPRESSIONS**:
+        ${toneDescriptions[blogTone].stylistics.expressions.join('\n')}
 
-NATURAL TRANSITIONS TO USE:
-${toneDescriptions[blogTone].stylistics.transitions.join('\n')}
-
-AUTHENTIC EXPRESSIONS:
-${toneDescriptions[blogTone].stylistics.expressions.join('\n')}
-
-QUALITY CHECKS:
-□ Title is in <title> tags
-□ All content is within <article> tags
-□ Tags are provided in the specified format
-`;
+        **QUALITY CHECKS**:
+        □ Title is in <title> tags  
+        □ All content is within <article> tags  
+        □ Tags are provided in the specified format  
+        `;
 
 
 
