@@ -9,6 +9,7 @@ import sendBlogReadyEmail from './email.js';
 import { sendFailureEmail } from './email.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+
 import { logInfo, logError } from '../../../utils/logger.js';
 import { promises as fs } from 'fs';
 import { fromFile } from '../../voice_to_text/spechTranscription.js';
@@ -95,10 +96,11 @@ const createWAVHeader = (chunkSize, sampleRate = 44100, numChannels = 2, bitDept
 transcriptionQueue.process(async (job) => {
     const startTime = Date.now();
     console.log(`Starting job ${job.id} at ${new Date().toISOString()}`);
-
+      const { fileName, fileDuration, userId, userPlan,blogType,blogTone } = validateJobData(job.data);
     try {
         // Destructure and validate job data
-        const { fileName, fileDuration, userId, userPlan } = validateJobData(job.data);
+        
+        console.log("inside process",blogType,blogTone );
 
         // Log job start with key details
         logInfo(`Starting transcription for user ${userId}, file: ${fileName}`, path.basename(__filename));
@@ -109,12 +111,12 @@ transcriptionQueue.process(async (job) => {
             audioDuration: fileDuration,
             userId,
             userPlan,
-            job
+            job,blogType,blogTone
         });
 
         const processingTime = (Date.now() - startTime) / 1000;
         logInfo(`Job ${job.id} completed successfully in ${processingTime}s`, path.basename(__filename));
-
+       console.log(result);
         return result;
 
     } catch (error) {
@@ -124,7 +126,7 @@ transcriptionQueue.process(async (job) => {
     }
 });
 function validateJobData(data) {
-    const { fileName, fileDuration, userId, userPlan } = data;
+    const { fileName, fileDuration, userId, userPlan,blogType,blogTone } = data;
 
     const validationRules = [
         {
@@ -154,10 +156,10 @@ function validateJobData(data) {
         fileName,
         fileDuration: parseFloat(fileDuration),
         userId,
-        userPlan
+        userPlan,blogType,blogTone
     };
 }
-async function processTranscriptionJob({ fileName, audioDuration, userId, userPlan, job }) {
+async function processTranscriptionJob({ fileName, audioDuration, userId, userPlan, job ,blogType,blogTone}) {
     try {
         // Download and validate audio file
         const buffer = await downloadAudioFile(fileName, userId);
@@ -166,7 +168,7 @@ async function processTranscriptionJob({ fileName, audioDuration, userId, userPl
         const transcription = await transcribeWithProgress(buffer, audioDuration, userId, job);
 
         // Generate blog content with retries
-        const blogContent = await generateBlogContent(transcription);
+        const blogContent = await generateBlogContent({transcription,blogType,blogTone});
 
         // Save results to database
         await saveResults(blogContent, userId, userPlan);
@@ -226,14 +228,14 @@ async function saveResults({ title, content, tag }, userId, userPlan) {
     }
 }
 
-async function generateBlogContent(transcription) {
+async function generateBlogContent({transcription,blogType,blogTone}) {
     const MAX_RETRIES = 2;
     let retries = MAX_RETRIES;
     let blogContent;
 
     while (retries >= 0) {
         try {
-            blogContent = await generateBlogFromText(transcription);
+            blogContent = await generateBlogFromText(transcription,blogType,blogTone);
 
             if (blogContent.title === 'Error') {
                 if (retries === 0) {
