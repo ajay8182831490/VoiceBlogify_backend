@@ -21,6 +21,6 @@ const router = express.Router();
 
 router.get('/linkedin/oauth/redirect', RequestRateLimiter, ensureAuthenticated, linkedinMiddleware, connect_to_linkedin);
 router.get('/auth/linkedin', RequestRateLimiter, ensureAuthenticated, to_linkedin)
-router.post('/linkedin/post', ensureAuthenticated, linkedinMiddleware, upload.fields([{ name: 'images', maxCount: 20 }, { name: 'video', maxCount: 1 }]), share_linkedin)
+router.post('/linkedin/post', RequestRateLimiter, ensureAuthenticated, linkedinMiddleware, upload.fields([{ name: 'images', maxCount: 9 }, { name: 'video', maxCount: 1 }]), share_linkedin)
 
 export default router;

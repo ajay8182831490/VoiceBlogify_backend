@@ -29,7 +29,7 @@ import { extractAudioFromVideo, checkUserPlan, getAudioDuration } from '../utili
 function sanitizeFileName(fileName) {
     return fileName.replace(/[^a-zA-Z0-9_\.]/g, '');
 }
-const addJobToQueue = async (userId, fileName, fileDuration, userPlan,blogType,blogTone) => {
+const addJobToQueue = async (userId, fileName, fileDuration, userPlan, blogType, blogTone) => {
     if (!userId || !fileName || !fileDuration || !userPlan) {
         console.error('Invalid input data:', { userId, fileName, fileDuration, userPlan });
         return;
@@ -37,7 +37,7 @@ const addJobToQueue = async (userId, fileName, fileDuration, userPlan,blogType,b
 
     try {
         const job = await transcriptionQueue.add(
-            { userId, fileName, fileDuration, userPlan,blogType,blogTone },
+            { userId, fileName, fileDuration, userPlan, blogType, blogTone },
             { attempts: 1, delay: 1000, removeOnComplete: true } // Retry with backoff
         );
         console.log('Job added to queue successfully:', job.id);
@@ -98,107 +98,44 @@ export const recordTranscription = async (req, res) => {
     const { userId } = req;
     logInfo(`Starting audio transcription process for user ${userId}`, path.basename(__filename), recordTranscription);
 
-    let fileName, fileDuration;
+    let fileName
     let tempFileName = `output-${userId}-${Date.now()}.wav`;
-      const { blogType,
-        blogTone } = req.body;
-
-    if (!blogType || !blogTone) {
-        return res.status(400).json({ message: "missing field required" });
-    }
-
-  console.log(blogType,blogTone);
-    // Validate file presence
-    const file = req.file;
-
-
-    if (!file) {
-        return res.status(400).json({ message: "No file uploaded" });
-    }
-
-    const fileType = file.mimetype;
-    if (!fileType.startsWith('audio/') && !fileType.startsWith('video/')) {
-        return res.status(400).json({ message: "Unsupported file type" });
-    }
-
-
-    tempFileName = sanitizeFileName(tempFileName);
-    fileName = encodeURIComponent(tempFileName);
-
-
-
-
-
-
-    let Buffer;
-
-    if (fileType.startsWith('audio/')) {
-
-        Buffer = file.buffer;
-
-    } else if (fileType.startsWith('video/')) {
-
-        const videoBuffer = file.buffer;
-
-
-
-        Buffer = await extractAudioFromVideo(videoBuffer, userId);
-
-
-        if (!Buffer) return res.status(500).json({ message: "Audio extraction from video failed" });
-
-
-
-    } else {
-        return res.status(400).json({ message: "Unsupported file type" });
-    }
-
-
-
-
     try {
 
+        const { blogType,
+            blogTone } = req.body;
 
-        const waveBuffer = await convertToWav(Buffer, userId);
-
-        fileDuration = await getAudioDuration(waveBuffer)
-
-        const userPlan = await checkUserPlan(userId);
-        if (!userPlan) {
-            return res.status(403).json({ message: "No active subscription plan" });
-        }
-
-        // Define maximum allowed duration based on the plan
-        const maxAllowedDuration = getMaxAllowedDuration(userPlan.plan);
-        if (fileDuration > maxAllowedDuration) {
-            return res.status(400).json({
-                message: `Your plan allows a maximum of ${maxAllowedDuration / 60} minutes of audio/video.`,
-            });
-        }
-
-        if (fileDuration < 60) {
-            return res.status(400).json({ message: "Audio duration should be at least1 minutes" })
+        if (!blogType || !blogTone) {
+            return res.status(400).json({ message: "missing field required" });
         }
 
 
 
-        const MAX_RETRIES = 1;
+        const file = req.file;
 
-        try {
-            await uploadWithRetry(userId, waveBuffer, fileName, MAX_RETRIES);
-        } catch (error) {
-            return res.status(500).json({ message: error.message });
+
+        if (!file) {
+            return res.status(400).json({ message: "No file uploaded" });
         }
 
-        try {
-            await addJobToQueue(userId, fileName, fileDuration, userPlan,blogType,blogTone);
-        } catch (queueError) {
-            logError(queueError, path.basename(__filename), 'Error adding job to queue');
-            return res.status(500).json({ message: "Failed to add transcription job to queue" });
+        const fileType = file.mimetype;
+        if (!fileType.startsWith('audio/') && !fileType.startsWith('video/')) {
+            return res.status(400).json({ message: "Unsupported file type" });
         }
+
+
+        tempFileName = sanitizeFileName(tempFileName);
+        fileName = encodeURIComponent(tempFileName);
+
+
+
         res.status(200).json({
             message: "Processing started, you'll be notified via email once it's done.",
-        })
+        });
+
+        processFileAfterResponse(file, fileType, fileName, userId, blogType, blogTone);
+
+
 
 
 
@@ -206,8 +143,9 @@ export const recordTranscription = async (req, res) => {
         logError(error, path.basename(__filename), 'Error in transcription process');
         return res.status(500).json({ message: "Internal server error" });
     }
+}
 
-};
+
 
 const uploadWithRetry = async (userId, waveBuffer, fileName, MAX_RETRIES) => {
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -222,6 +160,98 @@ const uploadWithRetry = async (userId, waveBuffer, fileName, MAX_RETRIES) => {
         }
     }
 };
+async function processFileAfterResponse(file, fileType, fileName, userId, blogType, blogTone) {
+    let errorCause = null;  // Variable to store the cause of failure
+
+    try {
+        let Buffer;
+
+
+
+        // Extract audio if it's a video file
+        if (fileType.startsWith('audio/')) {
+            Buffer = file.buffer;  // Direct audio
+        } else if (fileType.startsWith('video/')) {
+            const videoBuffer = file.buffer;
+            Buffer = await extractAudioFromVideo(videoBuffer, userId);  // Extract audio from video
+            if (!Buffer) {
+                errorCause = "Audio extraction from video failed";
+                logError(errorCause, path.basename(__filename), 'processFileAfterResponse');
+                await sendFailureEmail(userId, errorCause);  // Send failure email
+                return;
+            }
+        }
+
+        // Convert the audio to WAV format
+        const waveBuffer = await convertToWav(Buffer, userId);
+
+        // Get the duration of the audio file
+        const fileDuration = await getAudioDuration(waveBuffer);
+
+        // Check user's subscription plan
+        const userPlan = await checkUserPlan(userId);
+        if (!userPlan) {
+            errorCause = `No active subscription plan for user ${userId}`;
+            logError(errorCause, path.basename(__filename), 'processFileAfterResponse');
+            await sendFailureEmail(userId, errorCause);  // Send failure email
+            return;
+        }
+
+        // Check if the duration exceeds the user's plan limit
+        const maxAllowedDuration = getMaxAllowedDuration(userPlan.plan);
+        if (fileDuration > maxAllowedDuration) {
+            errorCause = `Audio duration exceeds allowed limit for user plan`;
+            logError(errorCause, path.basename(__filename), 'processFileAfterResponse');
+            await sendFailureEmail(userPlan?.user?.email, errorCause);  // Send failure email
+            return;
+        }
+
+        if (fileDuration < 60) {
+            errorCause = `Audio duration too short for processing`;
+            logError(errorCause, path.basename(__filename), 'processFileAfterResponse');
+            await sendFailureEmail(userPlan?.user?.email, errorCause);  // Send failure email
+            return;
+        }
+
+        // Try uploading the file with retries
+        const MAX_RETRIES = 1;
+        let uploadSuccess = false;
+        for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
+            try {
+                await uploadWithRetry(userId, waveBuffer, fileName, MAX_RETRIES);
+                uploadSuccess = true;
+                break;  // Exit loop if successful
+            } catch (uploadError) {
+                logError(`Upload attempt ${attempt} failed for user ${userId}: ${uploadError.message}`, path.basename(__filename), 'processFileAfterResponse');
+                if (attempt === MAX_RETRIES + 1) {
+                    errorCause = `Upload failed after ${attempt} attempts for user ${userId}: ${uploadError.message}`;
+                }
+            }
+        }
+
+        // If upload failed after retries, log and notify
+        if (!uploadSuccess) {
+            logError(errorCause, path.basename(__filename), 'processFileAfterResponse');
+            await sendFailureEmail(userPlan?.user?.email, errorCause);  // Send failure email
+            return;
+        }
+
+        // Finally, add the job to the queue if everything was successful
+        await addJobToQueue(userId, fileName, fileDuration, userPlan, blogType, blogTone);
+        logInfo(`Job successfully added to queue for user ${userId}`, path.basename(__filename), 'processFileAfterResponse');
+
+    } catch (error) {
+        errorCause = `Error in background processing: ${error.message}`;
+        logError(errorCause, path.basename(__filename), 'processFileAfterResponse');
+        await sendFailureEmail(userPlan?.user?.email, errorCause);  // Send failure email
+    }
+}
+
+
+// async function sendFailureEmail(userId, errorCause) {
+//     // Implement your email logic here
+//     console.log(`Sending failure email to user ${userId} with cause: ${errorCause}`);
+// }
 
 
 
@@ -442,7 +472,6 @@ transcriptionQueue.on('completed', async (job) => {
         res.status(500).json({ message: "Internal server error" }); // Send a generic error message to the user
     }
 };*/
-
 
 
 

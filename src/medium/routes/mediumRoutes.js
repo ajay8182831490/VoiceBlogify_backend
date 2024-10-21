@@ -8,7 +8,7 @@ import multer from 'multer';
 import { body } from "express-validator";
 const RequestRateLimiter = rateLimit({
     windowMs: 60 * 1000, // 1 minute
-    max: 4,
+    max: 3,
     handler: (req, res) => {
         res.status(429).json({ message: "Too many  request, please try again later." });
     }

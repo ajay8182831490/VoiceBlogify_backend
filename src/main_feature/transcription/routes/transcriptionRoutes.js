@@ -9,7 +9,7 @@ import attachUserId from "../../../middleware/atttachedUser.js";
 import multer from 'multer';
 const RateLimiter = rateLimit({
     windowMs: 60 * 1000,
-    max: 1,
+    max: 2,
     handler: (req, res) => {
         res.status(429).json({ message: "Too many request please try again ." });
     }

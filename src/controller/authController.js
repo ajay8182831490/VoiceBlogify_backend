@@ -84,7 +84,7 @@ export const registerUser = async (req, res) => {
         status: 'ACTIVE',
 
         startDate: new Date(),
-        remainingPosts: 1,
+        remainingPosts: 3,
 
       }
     });
@@ -325,7 +325,7 @@ export const checkAuth = async (req, res, next) => {
 
       authenticated: true,
       name: req.user.name,
-      id: req.user.id,
+
       googleId: req.user.googleId ? true : false,
       profilepic: req.user.profilepic || null,
       isVerified: req.user.isVerified,

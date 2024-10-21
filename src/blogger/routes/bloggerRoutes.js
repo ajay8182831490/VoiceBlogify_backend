@@ -7,7 +7,7 @@ import { ensureAuthenticated } from '../../middleware/authMiddleware.js';
 
 const RequestRateLimiter = rateLimit({
     windowMs: 60 * 1000,
-    max: 1,
+    max: 2,
     handler: (req, res) => {
         res.status(429).json({ message: "Too many request, please try again later." });
     }
