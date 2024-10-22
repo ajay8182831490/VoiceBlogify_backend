@@ -28,6 +28,8 @@ const remainingPostsByPlan = {
 
 
 export const getUserProfile = async (req, res) => {
+
+
     logInfo(`going to fetch the user profile information of user ${req.userId}`, path.basename(__filename), getUserProfile);
 
     try {
