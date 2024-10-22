@@ -178,7 +178,7 @@ async function processFileAfterResponse(file, fileType, fileName, userId, blogTy
             if (!Buffer) {
                 errorCause = "Audio extraction from video failed";
                 logError(errorCause, path.basename(__filename), 'processFileAfterResponse');
-                await sendFailureEmail1(userPlan?.user?.email, errorCause);  // Send failure email
+                //await sendFailureEmail1(userPlan?.user?.email, errorCause);  // Send failure email
                 return;
             }
         }

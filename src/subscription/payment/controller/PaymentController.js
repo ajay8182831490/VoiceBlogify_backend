@@ -134,12 +134,18 @@ router.post("/paypal/orders", ensureAuthenticated, async (req, res) => {
                 plan: {
                     not: Plan.FREE,
                 },
-
+                remainingPosts: {
+                    gt: 0
+                },
                 nextDueDate: {
-                    gte: now,
+                    gte: new Date(),
                 },
             },
         });
+
+
+
+
 
         if (activeSubscription) {
             return res.status(400).json({ message: "you have already plan exist" });
@@ -149,6 +155,7 @@ router.post("/paypal/orders", ensureAuthenticated, async (req, res) => {
 
 
         const { jsonResponse, httpStatusCode } = await createOrder(cart);
+
 
 
         res.status(httpStatusCode).json(jsonResponse);
@@ -321,7 +328,19 @@ const handlePaymentSubcription = async (
                 isVerified: true
             }
         })
-        //await sendPaymentSuccessEmail()
+
+        const userEmail = await prisma.user.findFirst({
+            where: {
+                id: userId
+            },
+            select: {
+                email: true,
+                name: true
+            },
+        });
+
+
+        await sendPaymentSuccessEmail(userEmail?.email, userEmail?.name, planName, amount);
 
 
     } catch (error) {
@@ -332,6 +351,6 @@ const handlePaymentSubcription = async (
     }
 };
 
-validatePaymentAndGetPlan(959.88);
+
 
 export default router;

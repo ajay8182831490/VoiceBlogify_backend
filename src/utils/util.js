@@ -82,9 +82,10 @@ const sendEmailforOtp = async (email, otp) => {
 };
 
 
-const sendPaymentSuccessEmail = async (userEmail, userName, paymentAmount) => {
+const sendPaymentSuccessEmail = async (userEmail, userName, planName, paymentAmount) => {
+
     const subject = 'Payment Successful - Thank You!';
-    const text = `Hello ${userName},\n\nThank you for your payment of ${paymentAmount}!\n\nWe appreciate your promptness, and we're thrilled to have you with us. Your subscription will continue without interruption, and you can enjoy all the features our service offers.\n\nIf you have any questions or need assistance, feel free to reach out to our support team.\n\nBest regards,\nThe VoiceBlogify Team`;
+    const text = `Hello ${userName},\n\nThank you for your payment of ${paymentAmount} for the ${planName} plan!\n\nWe appreciate your promptness, and we're thrilled to have you with us. Your subscription will continue without interruption, and you can enjoy all the features our service offers.\n\nIf you have any questions or need assistance, feel free to reach out to our support team.\n\nBest regards,\nThe VoiceBlogify Team`;
 
     await sendEmail(userEmail, subject, text);
 };

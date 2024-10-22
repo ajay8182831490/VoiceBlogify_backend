@@ -75,7 +75,7 @@ const allowedOrigins = ['https://www.voiceblogify.in'];
 
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  console.log(origin);
+
 
   // Check if the origin is allowed
   if (allowedOrigins.includes(origin)) {
@@ -115,6 +115,22 @@ store.on('error', (error) => {
 });
 
 // Session configuration
+// app.use(session({
+//   secret: process.env.SECRET_SESSION_KEY,
+//   resave: false,
+//   saveUninitialized: false,
+//   store: store,
+//   name: 'voiceblogify',
+//   cookie: {
+//     secure: true,
+//     httpOnly: true,
+//     maxAge: 1000 * 60 * 60 * 24, // 1 day
+//     sameSite: 'none',
+//    // path: '/',
+//    // domain: '.voiceblogify.in'  // Note the dot prefix for subdomain support
+//   },
+//   proxy: true
+// }))
 app.use(session({
   secret: process.env.SECRET_SESSION_KEY,
   resave: false,

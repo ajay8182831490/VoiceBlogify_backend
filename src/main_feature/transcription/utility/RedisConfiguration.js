@@ -256,7 +256,7 @@ async function generateBlogContent({ transcription, blogType, blogTone }) {
     }
 }
 
-async function processChunksInParallel(audioChunks, maxConcurrent = 3) {
+async function processChunksInParallel(audioChunks, maxConcurrent = 4) {
     console.log(`Starting parallel processing of ${audioChunks.length} chunks`);
     const results = new Array(audioChunks.length);
     const inProgress = new Set();
