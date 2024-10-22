@@ -71,15 +71,18 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// CORS configuration
-const corsOptions = {
-  origin: ['https://www.voiceblogify.in', 'https://voiceblogify.netlify.app', 'http://localhost:5173'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
-  exposedHeaders: ['Set-Cookie'],
-};
-app.use(cors(corsOptions));
+const allowedOrigins = ['https://www.voiceblogify.in', 'https://voiceblogify.netlify.app', 'http://localhost:5173'];
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie');
+  res.setHeader('Access-Control-Expose-Headers', 'Set-Cookie');
+  next();
+});
 
 // Session store using MongoDB
 const mongoUrl = process.env.MONGODB_URI;
