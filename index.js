@@ -71,16 +71,15 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-onst allowedOrigins = ['https://www.voiceblogify.in'];
+const allowedOrigins = ['https://www.voiceblogify.in'];
 
 app.use((req, res, next) => {
   const origin = req.headers.origin;
+  console.log(origin);
 
   // Check if the origin is allowed
   if (allowedOrigins.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
-  } else {
-    res.setHeader('Access-Control-Allow-Origin', ''); // Empty if not allowed
   }
 
   // Set other CORS headers
