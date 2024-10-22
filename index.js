@@ -75,7 +75,7 @@ const allowedOrigins = ['https://www.voiceblogify.in'];
 
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  console.log(origin);
+
 
   // Check if the origin is allowed
   if (allowedOrigins.includes(origin)) {
