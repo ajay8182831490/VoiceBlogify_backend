@@ -71,16 +71,29 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-const allowedOrigins = ['https://www.voiceblogify.in', 'https://voiceblogify.netlify.app', 'http://localhost:5173'];
+onst allowedOrigins = ['https://www.voiceblogify.in'];
+
 app.use((req, res, next) => {
   const origin = req.headers.origin;
+
+  // Check if the origin is allowed
   if (allowedOrigins.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', ''); // Empty if not allowed
   }
+
+  // Set other CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie');
   res.setHeader('Access-Control-Expose-Headers', 'Set-Cookie');
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204); // No Content for preflight
+  }
+
   next();
 });
 
