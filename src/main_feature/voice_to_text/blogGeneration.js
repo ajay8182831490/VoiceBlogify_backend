@@ -282,15 +282,16 @@ export const generateBlogFromText = async (transcribedText, blogType, blogTone) 
         };
 
         // Prepare the prompt using the provided transcribed text, blog type, and tone
-        const prompt = `
+       const prompt = `
         Imagine you're having a casual conversation with a friend about this topic. 
         Transform this audio transcript into a relatable and engaging ${blogType} blog post.
 
         Here’s the transcribed text: 
         ${transcribedText}
 
-        Write it as if you're sharing your thoughts over coffee—friendly, personal, and engaging. 
-        Feel free to include anecdotes, ask rhetorical questions, and express your genuine thoughts.
+        **IMPORTANT INSTRUCTIONS**:
+        - **Include a proper title in <title> tags. This is mandatory.**
+        - **Make sure the <title> is SEO-optimized and accurately reflects the blog content.**
 
         **SEO-Optimized Title**: Provide a catchy title that captures the essence of the blog.
 
@@ -334,44 +335,50 @@ export const generateBlogFromText = async (transcribedText, blogType, blogTone) 
         □ Title is in <title> tags  
         □ All content is within <article> tags  
         □ Tags are provided in the specified format  
-        `;
+`;
 
+const result = await model.generateContent(prompt);
+const responseText = await result.response.text();
 
+const dom = new JSDOM(responseText);
+const document = dom.window.document;
 
+let title = null;
 
+// Extract Title
+const titleElement = document.querySelector('title');
+if (titleElement) {
+    title = titleElement.textContent.trim();
+} else {
+    console.warn("Title extraction failed. Attempting fallback title.");
+    // Fallback to first heading or first part of article content
+    const altTitleElement = document.querySelector('h1') || document.querySelector('h2') || document.querySelector('article p');
+    if (altTitleElement) {
+        title = altTitleElement.textContent.trim().substring(0, 50) + '...';
+    } else {
+        title = "Untitled Blog";
+    }
+}
 
+// Extract Article Content
+const articleElement = document.querySelector('article');
+if (!articleElement) {
+    console.error("Article content extraction failed.");
+    return { title: "Error", content: "Failed to generate blog content.", tags: [] };
+}
+const articleString = articleElement.innerHTML.trim();
 
-        const result = await model.generateContent(prompt);
-        const responseText = await result.response.text();
+// Extract Tags
+const tagsElement = document.querySelector('span');
+let tagsArray = [];
+if (tagsElement) {
+    const tagsString = tagsElement.textContent;
+    tagsArray = tagsString.split(',').map(tag => tag.trim());
+} else {
+    console.warn("Tag extraction failed. Defaulting to empty tags.");
+}
 
-
-
-        const dom = new JSDOM(responseText);
-        const document = dom.window.document;
-        let title = null
-
-        const titleElement = document.querySelector('title');
-        if (titleElement) {
-            title = titleElement.textContent;
-        } else {
-            console.warn("Title extraction failed. Defaulting to 'Untitled'");
-        }
-        const articleElement = document.querySelector('article');
-
-
-        const articleString = articleElement.innerHTML;
-
-
-
-        const tagsString = document.querySelector('span').textContent;
-        const tagsArray = tagsString.split(',').map(tag => tag.trim());
-
-
-
-
-
-
-        return { title, content: articleString, tag: tagsArray }
+return { title, content: articleString, tag: tagsArray };
 
 
     } catch (error) {
