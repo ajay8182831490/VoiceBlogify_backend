@@ -25,7 +25,7 @@ export const connect_to_linkedin = async (req, res, next) => {
 
 
 
-        res.redirect('https://voiceblogify.netlify.app/dashboard/linkedin');
+        res.redirect('https://voiceblogify.in/dashboard/linkedin');
 
     } catch (error) {
         logError(
