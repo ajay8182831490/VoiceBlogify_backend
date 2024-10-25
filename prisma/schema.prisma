@@ -8,27 +8,29 @@ datasource db {
 }
 
 model User {
-  id              String        @id @default(uuid())
-  email           String        @unique
-  password        String?
-  googleId        String?       @unique
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  name            String?
-  expiryTime      DateTime?
-  otp             Int?
-  userAccessToken String?
-  freeTrialStart  DateTime?
-  role            UserRole      @default(USER)
-  profilepic      String?
-  blogCount       Int           @default(0)
-  isVerified      Boolean       @default(false)
-  RefreshToken    String?
-  lastActiveDay   DateTime      @default(now())
-  payments        Payment[]
-  post            Post[]
-  subscriptions   Subscription?
-  tokens          Token[]
+  id                String         @id @default(uuid())
+  email             String         @unique
+  password          String?
+  googleId          String?        @unique
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  name              String?
+  expiryTime        DateTime?
+  otp               Int?
+  tokens            Token[]
+  subscriptions     Subscription[]
+  userAccessToken   String?
+  freeTrialStart    DateTime?
+  role              UserRole       @default(USER)
+  profilepic        String?
+  payments          Payment[]
+  blogCount         Int            @default(0)
+  isVerified        Boolean        @default(false)
+  post              Post[]
+  RefreshToken String?
+
+  lastActiveDay   DateTime @default(now())
+
 }
 
 model Token {
