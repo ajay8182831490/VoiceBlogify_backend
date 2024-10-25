@@ -291,29 +291,6 @@ transcriptionQueue.on('completed', async (job) => {
 });
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import { exec } from 'child_process';
 import util from 'util'
 
@@ -364,6 +341,32 @@ export const urlTranscription = async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
