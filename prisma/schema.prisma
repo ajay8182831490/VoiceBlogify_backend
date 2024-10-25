@@ -5,7 +5,6 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-
 }
 
 model User {
@@ -31,77 +30,68 @@ model User {
   RefreshToken String?
 
   lastActiveDay   DateTime @default(now())
-  feedback FeedBack[]
+
 }
 
 model Token {
-  id              Int          @id @default(autoincrement())
-  userId          String
-  user            User         @relation(fields: [userId], references: [id])
-  platform        Platform
-  platformUserId  String?      // Unique ID for the user's account on the platform
-  accessToken     String?       // Access token for API requests
-  refreshToken    String?      // Refresh token, if applicable
-  mediumApi       String?
-  postUrns        String[]
-  expiryTime      String?
-  mediumUserId    String?
-
-  
+  id             Int      @id @default(autoincrement())
+  userId         String
+  platform       Platform
+  platformUserId String?
+  accessToken    String?
+  refreshToken   String?
+  mediumApi      String?
+  postUrns       String[]
+  expiryTime     String?
+  mediumUserId   String?
+  user           User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, platform])
 }
 
 model Post {
-  id             Int          @id @default(autoincrement())
+  id             Int      @id @default(autoincrement())
   userId         String
-  user           User         @relation(fields: [userId], references: [id])
   title          String?
   subtitle       String?
   tags           String[]
   content        String
-  dateOfCreation DateTime      @default(now())
+  dateOfCreation DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id])
 }
 
 model Subscription {
-  id                String        @id @default(uuid())
-  userId            String       @unique
-  user              User          @relation(fields: [userId], references: [id])
-  plan              Plan          @default(FREE)
-  status            String        @default("ACTIVE")
-  startDate         DateTime      @default(now())
- 
-  
-  billingCycle      BillingCycle  @default(MONTHLY)
-  
-  remainingPosts    Int           @default(1)
-  nextDueDate       DateTime?
-  invoiceLink       String?
-
- 
+  id             String       @id @default(uuid())
+  userId         String       @unique
+  plan           Plan         @default(FREE)
+  status         String       @default("ACTIVE")
+  startDate      DateTime     @default(now())
+  billingCycle   BillingCycle @default(MONTHLY)
+  remainingPosts Int          @default(1)
+  nextDueDate    DateTime?
+  invoiceLink    String?
+  user           User         @relation(fields: [userId], references: [id])
 }
-
 
 model PlanFeature {
-  id              Int            @id @default(autoincrement())
-  plan            Plan   
-  featureName     String
-  description     String?
-  limit           Int
-  billingCycle    BillingCycle?
-  
+  id           Int           @id @default(autoincrement())
+  plan         Plan
+  featureName  String
+  description  String?
+  limit        Int
+  billingCycle BillingCycle?
 }
+
 model Payment {
-  id              Int            @id @default(autoincrement())
-  userId          String
-  user            User           @relation(fields: [userId], references: [id])
- 
-  amount          Float
-  paymentDate     DateTime       @default(now()) 
-  paymentMethod   PaymentMethod  @default(PAYPAL) 
-  status          String         @default("COMPLETED")
-   payerId       String?        
-  paymentId     String  
+  id            Int           @id @default(autoincrement())
+  userId        String
+  amount        Float
+  paymentDate   DateTime      @default(now())
+  paymentMethod PaymentMethod @default(PAYPAL)
+  status        String        @default("COMPLETED")
+  payerId       String?
+  paymentId     String
+  user          User          @relation(fields: [userId], references: [id])
 }
 
 enum Platform {
@@ -129,12 +119,4 @@ enum BillingCycle {
 
 enum PaymentMethod {
   PAYPAL
-}
-
-
-model FeedBack{
-    id              Int            @id @default(autoincrement())
-  userId          String
-  user            User           @relation(fields: [userId], references: [id])
-  content String
 }
