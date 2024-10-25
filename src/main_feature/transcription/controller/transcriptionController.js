@@ -291,6 +291,63 @@ transcriptionQueue.on('completed', async (job) => {
 });
 
 
+import { exec } from 'child_process';
+import util from 'util'
+
+const execPromise = util.promisify(exec);
+
+
+
+
+const downloadAudio = async (url, outputFilePath) => {
+    const command = `yt-dlp -f bestaudio -o "${outputFilePath}" ${url}`;
+    try {
+        await execPromise(command);
+    } catch (error) {
+        logError(error, path.basename(__filename), downloadAudio);
+        throw new Error('Failed to download audio');
+    }
+};
+
+export const urlTranscription = async (req, res) => {
+    const { userId } = req;
+    const { url } = req.body;
+
+    logInfo(`Going to fetch the URL transcription for user ${userId}`, path.basename(__filename), urlTranscription);
+
+    if (!url) {
+        return res.status(400).json({ message: "URL is required" });
+    }
+
+    try {
+
+        const youtubePattern = /^(https?:\/\/)?(www\.)?(youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/)|youtu\.be\/)[a-zA-Z0-9_-]{11}(\?[^\s]*)?$/;
+        if (!youtubePattern.test(url)) {
+            return res.status(400).json({ message: "Invalid YouTube URL" });
+        }
+
+
+        const tempAudioPath = path.join(__dirname, 'temp_audio.mp3');
+
+
+        await downloadAudio(url, tempAudioPath);
+
+        await fs.unlink(tempAudioPath);
+
+
+        res.status(200).json({ message: 'Audio downloaded successfully', path: tempAudioPath });
+    } catch (error) {
+        logError(error, path.basename(__filename), urlTranscription);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+
+
+
+
+
+
 
 
 
