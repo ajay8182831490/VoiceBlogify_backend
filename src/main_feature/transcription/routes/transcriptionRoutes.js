@@ -4,7 +4,7 @@ const router = express.Router();
 
 
 import { ensureAuthenticated } from "../../../middleware/authMiddleware.js";
-import { recordTranscription } from "../controller/transcriptionController.js";
+import { recordTranscription, urlTranscription } from "../controller/transcriptionController.js";
 import attachUserId from "../../../middleware/atttachedUser.js";
 import multer from 'multer';
 const RateLimiter = rateLimit({
@@ -40,5 +40,6 @@ const upload = multer({
 
 router.post('/transcription/audioRecord', RateLimiter, ensureAuthenticated, attachUserId, upload.single('audio'), recordTranscription);
 router.post('/transcription/audiofile', RateLimiter, ensureAuthenticated, attachUserId, upload.single('file'), recordTranscription);
+router.post('/transcription/url', urlTranscription);
 
 export default router;
